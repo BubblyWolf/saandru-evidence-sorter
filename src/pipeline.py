@@ -138,10 +138,13 @@ def _classify_window(doc_text, metrics, metric_vecs, filename):
         # honest abstention: don't even spend LLM calls on a shortlist the embedder itself is
         # unsure about -- a low top similarity means the true metric probably isn't in the
         # candidate set at all, so no amount of LLM adjudication among these 5 can be trusted.
+        # Below the floor there is no reliable criterion signal either, so commit_level stays
+        # None -- never invent a metric (or even a criterion) when the embedder itself is lost.
         return {
             "chosen": None, "confidence": 0.0, "agree": False, "status": "review",
             "reason": "low_similarity", "evidence": "", "top_sim": top_sim,
             "candidates": [m["id"] for m, _ in cands],
+            "commit_level": None, "metric_uncertain": False,
         }
 
     letters = ["A", "B", "C", "D", "E"][:len(cands)]
@@ -194,7 +197,66 @@ def _classify_window(doc_text, metrics, metric_vecs, filename):
         # not all three runs matched (keeps the old "disagreement costs something" property).
         final_conf *= 0.85
 
-    status = "auto" if (chosen and final_conf >= REVIEW_THRESHOLD and agree) else "review"
+    # --- criterion-level fallback signal ---------------------------------------------------
+    # The metric-level vote above is strict: both runs must land on the exact same metric id.
+    # But real docs (JJCET set) showed the model repeatedly nailing the CRITERION (the general
+    # area, e.g. "1.3 Curriculum Enrichment") while flip-flopping on which specific metric within
+    # it applies -- that's a false abstention, not a real failure. So collect a second, looser
+    # signal: the criterion of every run's chosen metric, plus the criterion of the top-2
+    # shortlisted candidates (the embedder's own best guesses, independent of what the LLM said).
+    # If one criterion clearly dominates that pool, we trust "the area is right" even when the
+    # exact metric vote didn't converge.
+    criterion_votes = []
+    for c in choices:
+        if c in letters:
+            criterion_votes.append(cands[letters.index(c)][0]["criterion"])
+    for cand_m, _ in cands[:2]:
+        criterion_votes.append(cand_m["criterion"])
+
+    criterion_confident = False
+    dominant_criterion = None
+    if criterion_votes:
+        tally = {}
+        for cv in criterion_votes:
+            tally[cv] = tally.get(cv, 0) + 1
+        dominant_criterion, dom_count = max(tally.items(), key=lambda kv: kv[1])
+        # "clearly dominates" = majority of the pooled votes (runs' picks + top-2 shortlist),
+        # e.g. 2 different metrics that both fall under the same criterion, or all runs +
+        # top candidate agreeing on the area even if the metric itself was contested.
+        if dom_count > len(criterion_votes) / 2:
+            criterion_confident = True
+
+    metric_uncertain = False
+    commit_level = None
+    if chosen and final_conf >= REVIEW_THRESHOLD and agree:
+        # both runs converged on the same exact metric with solid confidence -- the strongest
+        # case, commit at metric level exactly as before.
+        commit_level = "metric"
+        status = "auto"
+    elif top_sim < SIM_FLOOR:
+        # guarded again here for the long-doc path where a window's own top_sim could in theory
+        # still be borderline; never auto-commit anything, metric or criterion, below the floor.
+        commit_level = None
+        chosen = None
+        status = "review"
+    elif criterion_confident:
+        # right neighbourhood, exact metric unsure -- commit to the criterion and hand over the
+        # single best-guess metric within it (highest-confidence candidate that belongs to the
+        # dominant criterion) so the human only has to confirm a number, not start from scratch.
+        in_crit = [(m, s) for m, s in cands if m["criterion"] == dominant_criterion]
+        best_m, best_s = max(in_crit, key=lambda ms: ms[1]) if in_crit else (cands[0][0], cands[0][1])
+        chosen = best_m
+        sim = best_s
+        commit_level = "criterion"
+        metric_uncertain = True
+        status = "auto"
+    else:
+        # no metric agreement and no dominant criterion either -- genuine abstention, but still
+        # surface the model's best guess (chosen stays as computed above) so a human reviewer
+        # has a starting point instead of a blank row.
+        commit_level = None
+        status = "review"
+
     return {
         "chosen": chosen,
         "confidence": round(final_conf, 2),
@@ -204,6 +266,8 @@ def _classify_window(doc_text, metrics, metric_vecs, filename):
         "evidence": evidence,
         "top_sim": sim,
         "candidates": [m["id"] for m, _ in cands],
+        "commit_level": commit_level,
+        "metric_uncertain": metric_uncertain,
     }
 
 
@@ -229,4 +293,9 @@ def classify(doc_text, metrics, metric_vecs, filename=""):
     result = dict(winner)
     result["status"] = "review"
     result["reason"] = "long_doc_window_disagreement"
+    # the window that "won" may have auto-committed (metric or criterion level) on its own, but
+    # the head/mid split disagreeing is exactly the kind of ambiguity a human should see -- don't
+    # let a stale commit_level from the winning window imply this doc auto-committed overall.
+    result["commit_level"] = None
+    result["metric_uncertain"] = False
     return result

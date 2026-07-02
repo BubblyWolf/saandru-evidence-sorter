@@ -7,9 +7,11 @@ Everything runs locally. Nothing is uploaded anywhere.
 import os
 import io
 import sys
+import glob
 import time
 import datetime as dt
 
+import yaml
 import streamlit as st
 from openpyxl import Workbook
 
@@ -17,16 +19,45 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 from pack import load_metrics          # noqa: E402
 from pipeline import embed_metrics, classify  # noqa: E402
 from ingest import read_document       # noqa: E402
+from organize import organize          # noqa: E402
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CRITERIA_DIR = os.path.join(BASE_DIR, "criteria")
 
-PACK_CHOICES = {
-    "NAAC (Arts/Science/College level)": os.path.join(CRITERIA_DIR, "naac_affiliated_raf2021.yaml"),
-    "NBA (Engineering programme)": os.path.join(CRITERIA_DIR, "nba_ug_engg_tier2_gapc_v4.yaml"),
+SUPPORTED_EXT = (".txt", ".docx", ".pdf")
+
+# Friendly labels for known criteria packs. Accreditation facts this UI must get right:
+#   - NAAC accredits the WHOLE INSTITUTION (any college, including engineering colleges).
+#   - NBA accredits ONE PROGRAMME (e.g. one engineering degree), not the whole college.
+#   - NAAC has separate manuals for AFFILIATED/CONSTITUENT colleges vs AUTONOMOUS colleges.
+# So an engineering college usually needs NAAC (for the institution) AND NBA (per programme).
+KNOWN_PACK_LABELS = {
+    "naac_affiliated_raf2021.yaml": "NAAC — Affiliated/Constituent college (whole institution)",
+    "naac_autonomous_raf.yaml": "NAAC — Autonomous college (whole institution)",
+    "nba_ug_engg_tier2_gapc_v4.yaml": "NBA — Engineering programme (Tier-II)",
 }
 
-SUPPORTED_EXT = (".txt", ".docx", ".pdf")
+
+def _discover_packs():
+    """Scan criteria/*.yaml and build {friendly_label: path}, reading each file's
+    institution_type/framework fields for the fallback label so a new pack dropped
+    into criteria/ shows up automatically without code changes."""
+    choices = {}
+    for path in sorted(glob.glob(os.path.join(CRITERIA_DIR, "*.yaml"))):
+        fname = os.path.basename(path)
+        label = KNOWN_PACK_LABELS.get(fname)
+        if label is None:
+            try:
+                with open(path, encoding="utf-8") as f:
+                    meta = yaml.safe_load(f) or {}
+                label = meta.get("institution_type") or meta.get("framework") or fname
+            except Exception:
+                label = fname
+        choices[label] = path
+    return choices
+
+
+PACK_CHOICES = _discover_packs()
 
 
 # --------------------------------------------------------------------------
@@ -102,11 +133,19 @@ folder_path = st.text_input(
 )
 st.session_state["folder_path"] = folder_path
 
+if not PACK_CHOICES:
+    st.error(f"No criteria packs found in {CRITERIA_DIR}. Add a .yaml pack there first.")
+    st.stop()
+
 pack_choice_label = st.radio(
     "Which accreditation type is this for?",
     list(PACK_CHOICES.keys()),
     index=0,
     help="Choose the accreditation body this batch of documents is for.",
+)
+st.caption(
+    "NAAC = the whole college. NBA = one engineering programme. "
+    "Engineering colleges usually need both."
 )
 pack_path = PACK_CHOICES[pack_choice_label]
 
@@ -414,6 +453,61 @@ if st.session_state.run_done:
             st.write("No decisions logged yet.")
         else:
             st.dataframe(st.session_state.audit_log, use_container_width=True, hide_index=True)
+
+    st.divider()
+
+    # ---- Organise into folders ----
+    st.markdown('<div class="big-step-title">Step 4 📁 — Organise files into folders</div>', unsafe_allow_html=True)
+    st.caption("Copies only — your original files are not moved or changed.")
+
+    # At L1/L2 the human must finish deciding every 🟡 file first (all_decided covers
+    # this). At L3 everything was auto-filed the moment classification finished, so
+    # all_decided is already True right after the run and the button is available
+    # immediately -- no extra human step is required at L3.
+    organize_disabled = not all_decided
+    if organize_disabled:
+        st.info("Finish reviewing the 🟡 unsure files above before organising into folders.")
+
+    org_col, _ = st.columns([1, 3])
+    with org_col:
+        organize_clicked = st.button(
+            "📁 Organise files into folders",
+            type="primary",
+            use_container_width=True,
+            disabled=organize_disabled,
+        )
+
+    if organize_clicked:
+        decisions = []
+        for r in results:
+            c = r.get("chosen_metric")
+            decisions.append({
+                "filename": r["file"],
+                "path": r.get("path"),
+                "criterion": (
+                    {"id": c["criterion"], "name": c["criterion_name"]} if c else None
+                ),
+                "metric": c["id"] if c else None,
+                "status": r.get("status"),
+                "decided_by": r.get("decided_by"),
+                "unreadable": r.get("unreadable", False),
+                "reason": r.get("reason", ""),
+            })
+
+        with st.spinner("Copying files into Praman_Sorted..."):
+            summary = organize(decisions, folder_path, oversight_level)
+
+        st.success(
+            f"Copied {summary['copied']} file(s) into folders. "
+            f"{len(summary['errors'])} problem(s)."
+        )
+        st.write(f"**Folders were created here:** `{summary['sorted_dir']}`")
+        st.caption("These are COPIES. Your original files in the source folder are untouched.")
+
+        if summary["errors"]:
+            with st.expander(f"⚠️ {len(summary['errors'])} file(s) had a problem"):
+                for err in summary["errors"]:
+                    st.write(f"- {err}")
 
 else:
     st.caption("Fill in Step 1 and Step 2 above, then press Start sorting.")

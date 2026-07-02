@@ -1,6 +1,18 @@
 """Parse the NAAC Autonomous Colleges manual text into a criteria YAML pack.
-Source: official manual PDF (reference/NAAC_Affiliated_College_Manual.pdf), extracted to text.
+Source: official manual PDF (reference/NAAC_Autonomous_College_Manual.pdf), extracted to text.
 QnM/QlM types are HEURISTIC (table layout lost in extraction) -> verify_type flag set for hand-check.
+
+Adapted from build_naac_pack.py (Affiliated/Constituent pack builder). Two differences from
+that manual's parsing:
+  1. Key Indicator 1.1 has two variants in this manual: *(U) "Curriculum Design and
+     Development" (Universities and Autonomous Colleges) and *(A) "Curriculum Planning and
+     Implementation" (Affiliated/Constituent Colleges). This pack is for Autonomous Colleges,
+     so the (U) variant name is preferred (opposite of the affiliated builder, which prefers A).
+     Every other Key Indicator in this manual has no U/A split.
+  2. After Criterion 7's last metric, the manual repeats an appendix ("Evaluative Report of the
+     Department" / metric-wise SSR summary tables) that reuses metric id numbers (1.1.2, 2.1.1,
+     etc.) as table row labels. That appendix is excluded from the parse window, else those
+     spurious ids would collide with / duplicate the real metrics.
 """
 import re, sys
 
@@ -19,7 +31,7 @@ CRITERIA = {
     "7": "Institutional Values and Best Practices",
 }
 
-# ---- parse Key Indicator names (prefer the (A) affiliated variant) ----
+# ---- parse Key Indicator names (prefer the (U) Universities/Autonomous variant) ----
 ki_names = {}
 for m in re.finditer(r"^(\d\.\d)\s*\*?\(?([UA])?\)?\s*[-–]\s*(.+)$|^(\d\.\d)\s+([A-Z][A-Za-z ,&()'-]{3,60})$", text, re.M):
     if m.group(1):
@@ -28,19 +40,28 @@ for m in re.finditer(r"^(\d\.\d)\s*\*?\(?([UA])?\)?\s*[-–]\s*(.+)$|^(\d\.\d)\s
         ki, variant, name = m.group(4), None, m.group(5).strip()
     if len(name) < 4 or len(name) > 80:
         continue
-    if ki not in ki_names or variant == "U":  # affiliated variant wins
+    if ki not in ki_names or variant == "U":  # Universities/Autonomous variant wins
         ki_names[ki] = name
 
-# ---- isolate the metrics section (first detailed metric to end of criterion 7) ----
-start = re.search(r"^1\.1\.1\.", text, re.M)
-metrics_text = text[start.start():] if start else text
+# ---- isolate the metrics section (first detailed metric to end of criterion 7,
+#      i.e. BEFORE the "Evaluative Report of the Department" appendix, which reuses
+#      metric-id-shaped table labels and would otherwise pollute the parse) ----
+start = re.search(r"^1\.1\.1\s", text, re.M)
+appendix = text.find("Evaluative Report of the Department")
+if start and appendix != -1 and appendix > start.start():
+    metrics_text = text[start.start():appendix]
+elif start:
+    metrics_text = text[start.start():]
+else:
+    metrics_text = text
 
 # strip page furniture
 lines = []
 for ln in metrics_text.splitlines():
     if re.match(r"^===== PAGE \d+ =====$", ln): continue
-    if ln.startswith("Manual for Affiliated/Constituent"): continue
+    if ln.startswith("Manual for Autonomous"): continue
     if ln.startswith("NAAC for Quality and Excellence"): continue
+    if ln.strip().startswith("Copyright Reg. No"): continue
     if re.match(r"^\d{1,3}$", ln.strip()): continue  # bare page numbers
     lines.append(ln)
 
@@ -92,11 +113,14 @@ NB = r"(?![A-Za-z])"    # right-side word-boundary substitute
 CUT_TRIGGERS = [
     WB + "Write description",
     WB + "Upload (?:a )?description",
-    WB + r"Q\s*[nl]?\s*M\s*[nl]?" + NB,   # QM / QnM / QlM / "Q M n" / "Q n M" / "Q l M"
-    "",                          # PDF private-use bullet glyph
+    WB + r"Q\s*[nlNL]?\s*[Mm]\s*[nlNL]?" + NB,   # QM / QnM / QlM / "Q M n" / "Q n M" / "Q l M" (also stray lowercase m)
+    "",                     # PDF private-use bullet glyph
+    "",                     # PDF private-use bullet glyph (variant seen in Autonomous manual)
+    "",                     # PDF private-use bullet glyph (variant seen in Autonomous manual)
     WB + "File Description",
     WB + "Upload",
     WB + r"(?:Link|Paste link|URL)\s*for",
+    WB + "Provide web link to",
     WB + "Any additional information",
     WB + "Any other information",
     WB + "Data Requirement",
@@ -109,6 +133,17 @@ CUT_TRIGGERS = [
 ]
 CUT_RE = re.compile("|".join(CUT_TRIGGERS))
 
+# PDF-extraction mangled several punctuation marks into unprintable private-use codepoints in
+# this manual (bullets, curly quotes, en dash, ellipsis) -- they all print as the U+FFFD
+# replacement glyph. Normalize the known ones to plain ASCII equivalents.
+MOJIBAKE_MAP = {
+    "•": " ", "": " ", "": " ", "": " ",  # bullets -> space
+    "‘": "'", "’": "'",                                # curly single quotes
+    "“": '"', "”": '"',                                # curly double quotes
+    "–": "-", "—": "-",                                # en/em dash -> hyphen
+    "…": "...",                                             # ellipsis
+}
+
 
 def clean_metric_text(raw):
     """Keep only the substantive sentence(s) before SSR-portal form furniture begins."""
@@ -118,7 +153,9 @@ def clean_metric_text(raw):
         s = s[:m.start()]
     # drop a bare leftover weightage number at the very end, e.g. "...within 5"
     s = re.sub(r"\s+\d{1,2}\s*$", "", s)
-    # drop stray PDF-extraction mangled-encoding placeholder char
+    # normalize known mangled punctuation; drop any other unprintable/replacement char
+    for bad, good in MOJIBAKE_MAP.items():
+        s = s.replace(bad, good)
     s = s.replace("�", "")
     s = re.sub(r"\s+", " ", s).strip()
     s = s.rstrip(" .,-–—")
@@ -142,15 +179,27 @@ for mid in sorted(metrics, key=lambda k: [int(x) for x in k.split(".")]):
 for mid in dupe_ids:
     del metrics[mid]
 
+# ---- known source-PDF text-layer overlap ----
+# On manual page 86, two text runs are stacked at identical coordinates (a defect in the
+# official PDF itself, confirmed via pdfplumber word-position inspection -- not an artifact
+# of our extraction), so 4.3.3's extracted text comes out character-interleaved
+# ("Ban.d wiSdttuhd oefn ti n- tceornmept uctoenr nraetcioti on..."). Rather than guess a
+# reconstruction, flag it plainly for a hand-check against the manual PDF.
+GARBLED_IDS = {"4.3.3"}
+for mid in GARBLED_IDS:
+    if mid in metrics:
+        metrics[mid]["text"] = "[VERIFY - source PDF has overlapping text layers on this metric; hand-check against the manual] " + metrics[mid]["text"]
+
 # ---- emit YAML ----
 out = []
-out.append("# NAAC criteria pack - Autonomous Colleges (RAF, manual ver. 1.3.2021)")
-out.append("# Source: official manual (reference/NAAC_Affiliated_College_Manual.pdf). Auto-parsed; texts trimmed to ~420 chars.")
+out.append("# NAAC criteria pack - Autonomous Colleges (Manual for Autonomous Colleges)")
+out.append("# Source: official manual (reference/NAAC_Autonomous_College_Manual.pdf). Auto-parsed; texts trimmed to ~420 chars.")
 out.append("# Form/table boilerplate (Upload/File Description/Options/table headers) stripped; duplicate-text metrics dropped (lower id kept).")
 out.append("# type: heuristic QnM/QlM (verify_type: true = hand-check against the manual tables before release).")
-out.append("# NOTE: NAAC Binary/MBGL (10 attributes) announced 2025 but portal not live as of 2026-06; this RAF pack is what colleges currently use.")
+out.append("# KI 1.1 uses the *(U) 'Curriculum Design and Development' variant (Universities and Autonomous Colleges),")
+out.append("# not the *(A) 'Curriculum Planning and Implementation' variant used by the Affiliated/Constituent pack.")
 out.append("pack: naac_autonomous_raf")
-out.append("framework: NAAC Revised Accreditation Framework (RAF) - Autonomous")
+out.append("framework: NAAC Revised Accreditation Framework (RAF)")
 out.append("institution_type: Autonomous Colleges")
 out.append("criteria:")
 for cid in sorted(CRITERIA):

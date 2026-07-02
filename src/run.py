@@ -31,6 +31,8 @@ def main():
 
     rows, correct_crit, correct_metric, scored = [], 0, 0, 0
     auto_count, auto_correct_crit, review_count = 0, 0, 0
+    metric_commit_count, metric_commit_correct = 0, 0
+    crit_commit_count, crit_commit_correct = 0, 0
     print(f"\nClassifying {len(files)} documents...\n" + "-" * 78)
     for fn in files:
         t0 = time.time()
@@ -43,8 +45,13 @@ def main():
                    r["confidence"], r["status"], r["evidence"][:120],
                    ", ".join(r["candidates"])])
         dt = time.time() - t0
+        commit_level = r.get("commit_level")
         if r["status"] == "auto":
             auto_count += 1
+            if commit_level == "metric":
+                metric_commit_count += 1
+            elif commit_level == "criterion":
+                crit_commit_count += 1
         else:
             review_count += 1
         flag = ""
@@ -56,11 +63,16 @@ def main():
                     correct_crit += 1; flag += "C"
                     if r["status"] == "auto":
                         auto_correct_crit += 1
+                        if commit_level == "metric":
+                            metric_commit_correct += 1
+                        elif commit_level == "criterion":
+                            crit_commit_correct += 1
                 if mid == tm: correct_metric += 1; flag += "M"
                 flag = f"[crit={'OK' if crit==tc else 'X'} metric={'OK' if mid==tm else 'X'}]"
             else:
                 flag = "[ambiguous -> " + ("review OK" if r["status"] == "review" else "MISSED") + "]"
-        print(f"{fn[:34]:34} -> C{crit} {mid:8} conf={r['confidence']:.2f} {r['status']:6} {dt:4.1f}s {flag}")
+        lvl_tag = {"metric": "", "criterion": "~crit"}.get(commit_level, "")
+        print(f"{fn[:34]:34} -> C{crit} {mid:8} conf={r['confidence']:.2f} {r['status']:6}{lvl_tag:5} {dt:4.1f}s {flag}")
 
     out = os.path.join(os.path.dirname(FOLDER), "evidence_index.xlsx")
     try:
@@ -76,10 +88,18 @@ def main():
 
     # honest headline: of the documents the tool actually COMMITTED to (status=auto), how many
     # were right, versus how many it abstained on (status=review, i.e. handed to a human).
+    # Split into metric-level commits (exact metric agreed by both runs) and criterion-only
+    # commits (the new fallback: right area, exact metric was a best guess) -- these carry
+    # different confidence and should not be silently merged into one number.
     committed_pct = (100 * auto_correct_crit // auto_count) if auto_count else 0
     print(f"COMMITTED (status=auto): {auto_count}/{len(files)} docs, "
           f"{auto_correct_crit}/{auto_count if auto_count else 1} correct on criterion "
           f"({committed_pct}%)  |  ABSTAINED (status=review): {review_count}/{len(files)}")
+    print(f"COMMITTED metric: {metric_commit_count} | COMMITTED criterion-only: {crit_commit_count} "
+          f"| ABSTAINED: {review_count}")
+    print(f"committed-correct on criterion: {auto_correct_crit}/{metric_commit_count + crit_commit_count} "
+          f"(metric-level {metric_commit_correct}/{metric_commit_count if metric_commit_count else 1}, "
+          f"criterion-only {crit_commit_correct}/{crit_commit_count if crit_commit_count else 1})")
 
 
 if __name__ == "__main__":

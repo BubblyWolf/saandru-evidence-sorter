@@ -50,6 +50,14 @@ Praman has a simple point-and-click screen for office staff (no command-line ste
 
 Everything runs on this computer only — no document ever leaves it.
 
+## Organising into folders
+After reviewing (Step 4 on screen), press **📁 Organise files into folders**. Praman creates a
+`Praman_Sorted` folder inside your source folder, with one subfolder per criterion plus
+`_NEEDS_REVIEW` and `_COULD_NOT_READ`. Files are **copied** there (never moved) — your original
+folder is never changed. At oversight levels L1/L2 the button only becomes active once every 🟡
+file has been reviewed; at L3 it is available as soon as sorting finishes, since L3 auto-files
+everything immediately.
+
 ## License
 MIT (planned). Official accreditation manuals are © their issuing bodies (NAAC/NBA) and are **not**
 redistributed here — see `reference/SOURCES.md` for where to download them.
