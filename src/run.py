@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from pack import load_metrics
 from ingest import read_document
 from pipeline import embed_metrics, classify
+from enrich import extract_academic_year, suggest_name
 from openpyxl import Workbook
 
 FOLDER = sys.argv[1] if len(sys.argv) > 1 else r"D:\praman\samples\mock"
@@ -27,7 +28,7 @@ def main():
 
     wb = Workbook(); ws = wb.active; ws.title = "Evidence Index"
     ws.append(["File", "Criterion", "KI", "Metric", "Metric text", "Confidence",
-               "Status", "Evidence quote", "Top-3 candidates"])
+               "Status", "Evidence quote", "Top-3 candidates", "Year", "Suggested name"])
 
     rows, correct_crit, correct_metric, scored = [], 0, 0, 0
     auto_count, auto_correct_crit, review_count = 0, 0, 0
@@ -41,9 +42,15 @@ def main():
         c = r["chosen"]
         crit = c["criterion"] if c else "-"
         mid = c["id"] if c else "NONE"
+
+        year_info = extract_academic_year(text)
+        year = year_info["year"]
+        suggested_name = suggest_name(text, criterion_name=(c["criterion_name"] if c else ""),
+                                       metric_id=mid)
+
         ws.append([fn, crit, c["ki"] if c else "-", mid, c["text"][:90] if c else "-",
                    r["confidence"], r["status"], r["evidence"][:120],
-                   ", ".join(r["candidates"])])
+                   ", ".join(r["candidates"]), year or "", suggested_name])
         dt = time.time() - t0
         commit_level = r.get("commit_level")
         if r["status"] == "auto":
@@ -72,7 +79,8 @@ def main():
             else:
                 flag = "[ambiguous -> " + ("review OK" if r["status"] == "review" else "MISSED") + "]"
         lvl_tag = {"metric": "", "criterion": "~crit"}.get(commit_level, "")
-        print(f"{fn[:34]:34} -> C{crit} {mid:8} conf={r['confidence']:.2f} {r['status']:6}{lvl_tag:5} {dt:4.1f}s {flag}")
+        year_tag = f" yr={year}" if year else ""
+        print(f"{fn[:34]:34} -> C{crit} {mid:8} conf={r['confidence']:.2f} {r['status']:6}{lvl_tag:5} {dt:4.1f}s{year_tag} {flag}")
 
     out = os.path.join(os.path.dirname(FOLDER), "evidence_index.xlsx")
     try:

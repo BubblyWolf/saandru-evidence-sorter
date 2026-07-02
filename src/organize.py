@@ -39,6 +39,10 @@ Folder layout:
   - "Criterion_<id>_<name>"  -> documents Praman matched to that accreditation
                                  criterion (either automatically, or after you
                                  accepted / corrected the suggestion on screen).
+      - "AY_<year>"          -> inside each criterion folder, documents are further
+                                 sorted by the academic year Praman detected in them
+                                 (e.g. "AY_2023-24").
+      - "_YEAR_UNKNOWN"      -> documents where no academic year could be detected.
   - "_NEEDS_REVIEW"          -> documents that still need a human decision.
   - "_COULD_NOT_READ"        -> files Praman could not open or understand
                                  (unsupported format, corrupt file, etc).
@@ -87,6 +91,52 @@ def _criterion_folder_name(criterion):
     return f"Criterion_{safe_id}_{safe_name}"
 
 
+def _year_subfolder_name(year):
+    """Build the AY_<year> subfolder name, or the fallback bucket when no year
+    was detected. `year` is expected to already be normalized (e.g. "2023-24"
+    or a bare "2024") -- sanitize_folder_name() just guards against stray
+    illegal characters getting through."""
+    if not year:
+        return "_YEAR_UNKNOWN"
+    safe_year = sanitize_folder_name(str(year), fallback="")
+    if not safe_year:
+        return "_YEAR_UNKNOWN"
+    return f"AY_{safe_year}"
+
+
+def _dest_filename(decision, original_filename):
+    """Build "<metric_id>_<safe_suggested_name>_<year>.<ext>", gracefully skipping
+    any part that is missing. Falls back to the original filename if nothing
+    (metric id / suggested name / year) is available at all."""
+    _, ext = os.path.splitext(original_filename)
+
+    metric_id = decision.get("metric")
+    suggested_name = decision.get("suggested_name")
+    year = decision.get("year")
+
+    parts = []
+    if metric_id:
+        parts.append(sanitize_folder_name(str(metric_id), fallback=""))
+    if suggested_name:
+        # reuse the same illegal-char/whitespace cleanup as folder names, but
+        # keep it as a filename piece (sanitize_folder_name already strips the
+        # Windows-illegal set and trims trailing dots/spaces).
+        safe_name = sanitize_folder_name(str(suggested_name), fallback="")
+        if safe_name:
+            parts.append(safe_name.replace(" ", "_"))
+    if year:
+        safe_year = sanitize_folder_name(str(year), fallback="")
+        if safe_year:
+            parts.append(safe_year)
+
+    parts = [p for p in parts if p]
+    if not parts:
+        return original_filename  # nothing usable -> keep the original name
+
+    stem = "_".join(parts)[:150]  # keep it reasonable
+    return f"{stem}{ext}"
+
+
 def _looks_unreadable(decision):
     """A decision is 'could not read' if it was flagged unreadable by the pipeline,
     or its filename/reason carries the "[...]" marker ingest.py uses for that."""
@@ -124,6 +174,12 @@ def organize(decisions, source_folder, oversight_level=None):
           - decided_by            : "auto" / "human" / "pending"
           - unreadable            : bool
           - reason                : free text; "[UNREADABLE: ...]" style marker also honoured
+          - year                  : optional detected/normalized academic year, e.g. "2023-24".
+                                    When present (and the file is filed under a criterion),
+                                    it is copied into an "AY_<year>" subfolder; otherwise the
+                                    file lands in "_YEAR_UNKNOWN" under that criterion.
+          - suggested_name        : optional short plain-English title (human-editable) used
+                                    to build the copied filename alongside the metric id/year.
 
     source_folder: the folder the originals live in. "Praman_Sorted" is created
         inside this folder.
@@ -177,10 +233,12 @@ def organize(decisions, source_folder, oversight_level=None):
                 if not criterion:
                     dest_dir = review_dir  # no criterion committed -> treat as needs review
                 else:
-                    dest_dir = os.path.join(sorted_dir, _criterion_folder_name(criterion))
+                    crit_dir = os.path.join(sorted_dir, _criterion_folder_name(criterion))
+                    dest_dir = os.path.join(crit_dir, _year_subfolder_name(decision.get("year")))
                     os.makedirs(dest_dir, exist_ok=True)
 
-            dest_path = _unique_dest_path(dest_dir, os.path.basename(filename))
+            dest_filename = _dest_filename(decision, os.path.basename(filename))
+            dest_path = _unique_dest_path(dest_dir, dest_filename)
             shutil.copy2(src_path, dest_path)
             summary["copied"] += 1
         except Exception as exc:  # noqa: BLE001 -- one bad file must never kill the batch
@@ -206,6 +264,8 @@ if __name__ == "__main__":
         "unsure_doc.txt": "needs human review",
         "corrupt.pdf": "flagged unreadable",
         "no_criterion.txt": "auto status but no criterion object -> should land in review",
+        "scholarship_dated.txt": "auto, committed criterion, has a detected year",
+        "scholarship_undated.txt": "auto, committed criterion, no year detected",
     }
     for fn, content in files.items():
         with open(os.path.join(tmp_root, fn), "w", encoding="utf-8") as f:
@@ -277,6 +337,28 @@ if __name__ == "__main__":
             "status": "auto",
             "decided_by": "auto",
         },
+        {
+            # YEAR-DETECTION test: has a detected year -> should land in an AY_<year> subfolder
+            # with a filename built from metric id + suggested name + year.
+            "filename": "scholarship_dated.txt",
+            "criterion": {"id": "5.1", "name": "Student Support"},
+            "metric": "5.1.1",
+            "year": "2023-24",
+            "suggested_name": "Scholarship Beneficiary List",
+            "status": "auto",
+            "decided_by": "auto",
+        },
+        {
+            # UNDATED test: no year detected -> should land in _YEAR_UNKNOWN under the
+            # criterion folder, filename still uses metric id + suggested name (no year part).
+            "filename": "scholarship_undated.txt",
+            "criterion": {"id": "5.1", "name": "Student Support"},
+            "metric": "5.1.2",
+            "year": None,
+            "suggested_name": "Scholarship Undated Note",
+            "status": "auto",
+            "decided_by": "auto",
+        },
     ]
 
     result = organize(decisions, tmp_root, oversight_level="L2")
@@ -285,8 +367,8 @@ if __name__ == "__main__":
     # --- verify -------------------------------------------------------------------
     problems = []
 
-    if result["copied"] != 7:
-        problems.append(f"expected 7 copies, got {result['copied']}")
+    if result["copied"] != 9:
+        problems.append(f"expected 9 copies, got {result['copied']}")
     if result["skipped"] != 1:
         problems.append(f"expected 1 skipped, got {result['skipped']}")
     if len(result["errors"]) != 1:
@@ -300,13 +382,22 @@ if __name__ == "__main__":
     if not os.path.isdir(crit_dir):
         problems.append(f"expected criterion folder missing: {crit_dir}")
     else:
-        names_in_crit = set(os.listdir(crit_dir))
-        if "syllabus_2024.txt" not in names_in_crit:
-            problems.append("syllabus_2024.txt not filed into criterion folder")
-        # two "report.txt" decisions -> collision must be resolved with a suffix
-        report_variants = {n for n in names_in_crit if n.startswith("report")}
-        if len(report_variants) != 2:
-            problems.append(f"expected 2 report.txt variants (collision handling), got {report_variants}")
+        # these decisions carry no "year" key -> they land under _YEAR_UNKNOWN inside
+        # the criterion folder (the new year-first layout).
+        crit_unknown_dir = os.path.join(crit_dir, "_YEAR_UNKNOWN")
+        if not os.path.isdir(crit_unknown_dir):
+            problems.append(f"expected _YEAR_UNKNOWN subfolder missing: {crit_unknown_dir}")
+        else:
+            names_in_crit = set(os.listdir(crit_unknown_dir))
+            # this decision carries a "metric": "1.1.1" -> the new naming rule renames the
+            # copy to "<metric_id>.<ext>" (no suggested_name/year present to add on).
+            if "1.1.1.txt" not in names_in_crit:
+                problems.append(f"syllabus_2024.txt (metric 1.1.1) not renamed as expected, got {names_in_crit}")
+            # two "report.txt" decisions with NO metric key -> original filename is kept,
+            # and the collision must be resolved with a suffix.
+            report_variants = {n for n in names_in_crit if n.startswith("report")}
+            if len(report_variants) != 2:
+                problems.append(f"expected 2 report.txt variants (collision handling), got {report_variants}")
 
     mou_dir = os.path.join(sorted_dir, "Criterion_3_MoUs _ _Extension__ _Activities_")
     if not os.path.isdir(mou_dir):
@@ -315,10 +406,35 @@ if __name__ == "__main__":
         if not candidates:
             problems.append("no sanitized Criterion_3_* folder found for the odd-character name")
 
+    # --- YEAR-detection / smart-naming checks --------------------------------------
+    support_dir = os.path.join(sorted_dir, "Criterion_5.1_Student Support")
+    if not os.path.isdir(support_dir):
+        problems.append(f"expected criterion folder missing: {support_dir}")
+    else:
+        dated_dir = os.path.join(support_dir, "AY_2023-24")
+        if not os.path.isdir(dated_dir):
+            problems.append(f"expected AY_2023-24 subfolder missing: {dated_dir}")
+        else:
+            dated_names = set(os.listdir(dated_dir))
+            expected_dated = "5.1.1_Scholarship_Beneficiary_List_2023-24.txt"
+            if expected_dated not in dated_names:
+                problems.append(f"dated file not named as expected, got {dated_names}")
+
+        unknown_dir = os.path.join(support_dir, "_YEAR_UNKNOWN")
+        if not os.path.isdir(unknown_dir):
+            problems.append(f"expected _YEAR_UNKNOWN subfolder missing: {unknown_dir}")
+        else:
+            undated_names = set(os.listdir(unknown_dir))
+            expected_undated = "5.1.2_Scholarship_Undated_Note.txt"
+            if expected_undated not in undated_names:
+                problems.append(f"undated file not named as expected, got {undated_names}")
+
     review_dir = os.path.join(sorted_dir, NEEDS_REVIEW_DIRNAME)
     review_names = set(os.listdir(review_dir)) if os.path.isdir(review_dir) else set()
-    if "unsure_doc.txt" not in review_names:
-        problems.append("unsure_doc.txt not filed into _NEEDS_REVIEW")
+    # unsure_doc.txt carries "metric": "2.1.1" -> also renamed by the same naming rule,
+    # even inside _NEEDS_REVIEW (no year split happens here, per spec).
+    if "2.1.1.txt" not in review_names:
+        problems.append(f"unsure_doc.txt (metric 2.1.1) not filed into _NEEDS_REVIEW as expected, got {review_names}")
     if "no_criterion.txt" not in review_names:
         problems.append("no_criterion.txt (no criterion object) not filed into _NEEDS_REVIEW")
 

@@ -20,6 +20,7 @@ from pack import load_metrics          # noqa: E402
 from pipeline import embed_metrics, classify  # noqa: E402
 from ingest import read_document       # noqa: E402
 from organize import organize          # noqa: E402
+from enrich import extract_academic_year, suggest_name  # noqa: E402
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CRITERIA_DIR = os.path.join(BASE_DIR, "criteria")
@@ -237,6 +238,14 @@ if start_clicked:
 
                 result = classify(text, metrics, metric_vecs)
                 chosen = result["chosen"]
+
+                year_info = extract_academic_year(text)
+                suggested_name = suggest_name(
+                    text,
+                    criterion_name=(chosen["criterion_name"] if chosen else ""),
+                    metric_id=(chosen["id"] if chosen else ""),
+                )
+
                 record.update({
                     "confidence": result["confidence"],
                     "engine_status": result["status"],   # "auto" or "review" from the model
@@ -244,6 +253,9 @@ if start_clicked:
                     "candidates": result["candidates"],
                     "doc_preview": text[:400],
                     "chosen_metric": chosen,  # dict or None
+                    "year": year_info["year"],
+                    "year_confidence": year_info["confidence"],
+                    "suggested_name": suggested_name,
                 })
 
                 # decide bucket based on oversight level + engine status
@@ -303,6 +315,7 @@ if st.session_state.run_done:
                     "File": r["file"],
                     "Criterion": f"{c['criterion']} - {c['criterion_name']}" if c else "-",
                     "Metric": c["id"] if c else "-",
+                    "Year": r.get("year") or "-",
                     "Confidence": f"{r.get('confidence', 0):.0%}",
                     "Evidence quote": r.get("evidence", ""),
                 })
@@ -342,6 +355,23 @@ if st.session_state.run_done:
                     st.caption(f"Confidence: {r.get('confidence', 0):.0%}")
                 else:
                     st.write("We could not find a confident match for this document.")
+
+                detected_year = r.get("year")
+                if detected_year:
+                    st.caption(f"Detected year: **{detected_year}** "
+                               f"({r.get('year_confidence', 'low')} confidence)")
+                else:
+                    st.caption("Detected year: none found")
+
+                # Editable document name -- prefilled with the model's suggestion so the
+                # human can correct it before filing. This IS the intended human-oversight
+                # point: the assistant suggests, the person confirms or fixes it.
+                edited_name = st.text_input(
+                    "Document name (edit if needed, this is used when filing)",
+                    value=r.get("suggested_name", ""),
+                    key=f"name_{r['file']}_{idx}",
+                )
+                r["suggested_name"] = edited_name
 
                 col_accept, col_skip = st.columns([1, 1])
                 with col_accept:
@@ -418,19 +448,22 @@ if st.session_state.run_done:
         wb = Workbook()
         ws = wb.active
         ws.title = "Evidence Index"
-        ws.append(["File", "Criterion", "Metric", "Confidence", "Decided by", "Evidence quote"])
+        ws.append(["File", "Criterion", "Metric", "Year", "Confidence", "Decided by",
+                   "Evidence quote", "Suggested name"])
         for r in results:
             if r.get("unreadable"):
-                ws.append([r["file"], "-", "-", "-", "-", r.get("reason", "")])
+                ws.append([r["file"], "-", "-", "-", "-", "-", r.get("reason", ""), "-"])
                 continue
             c = r.get("chosen_metric")
             ws.append([
                 r["file"],
                 f"{c['criterion']} - {c['criterion_name']}" if c else "-",
                 c["id"] if c else "NONE",
+                r.get("year") or "-",
                 r.get("confidence", 0),
                 r.get("decided_by", "pending"),
                 r.get("evidence", ""),
+                r.get("suggested_name", ""),
             ])
         buf = io.BytesIO()
         wb.save(buf)
@@ -492,6 +525,8 @@ if st.session_state.run_done:
                 "decided_by": r.get("decided_by"),
                 "unreadable": r.get("unreadable", False),
                 "reason": r.get("reason", ""),
+                "year": r.get("year"),
+                "suggested_name": r.get("suggested_name", ""),
             })
 
         with st.spinner("Copying files into Praman_Sorted..."):
