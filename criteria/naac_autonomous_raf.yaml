@@ -1,0 +1,691 @@
+# NAAC criteria pack - Autonomous Colleges (RAF, manual ver. 1.3.2021)
+# Source: official manual (reference/NAAC_Affiliated_College_Manual.pdf). Auto-parsed; texts trimmed to ~420 chars.
+# Form/table boilerplate (Upload/File Description/Options/table headers) stripped; duplicate-text metrics dropped (lower id kept).
+# type: heuristic QnM/QlM (verify_type: true = hand-check against the manual tables before release).
+# NOTE: NAAC Binary/MBGL (10 attributes) announced 2025 but portal not live as of 2026-06; this RAF pack is what colleges currently use.
+pack: naac_autonomous_raf
+framework: NAAC Revised Accreditation Framework (RAF) - Autonomous
+institution_type: Autonomous Colleges
+criteria:
+  - id: "1"
+    name: "Curricular Aspects"
+    key_indicators:
+      - id: "1.1"
+        name: "Curriculum Design and Development"
+        metrics:
+          - id: "1.1.1"
+            type: "QlM"
+            verify_type: true
+            text: "Curricula developed and implemented have relevance to the local, national, regional and global developmental needs which is reflected in."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "1.1.2"
+            type: "QnM"
+            verify_type: true
+            text: "Percentage of Programmes where syllabus revision was carried out during the last five years (20) &."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "1.1.3"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage of courses having focus on employability/ entrepreneurship/ skill development offered by the institution during the last five years (10) Activities/Content with direct Year of Link to the."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "1.2"
+        name: "Academic Flexibility"
+        metrics:
+          - id: "1.2.1"
+            type: "QnM"
+            verify_type: true
+            text: "Percentage of new courses introduced of the total number of courses across all Programmes offered during the last five years (20)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "1.2.2"
+            type: "QnM"
+            verify_type: true
+            text: "Percentage of programs in which Choice Based Credit System (CBCS)/elective course system has been implemented (20) Programme Programme Year of Status of Year of Year of If revision Link to the Code name Introduction implementatioimplementation of revision has been relevant n of CBCS / ECS CBCS / ECS (if any) carried out document (Yes/No) in the syllabus during last 5 years, Percentage of content added or replaced • D"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "1.3"
+        name: "Curriculum Enrichment"
+        metrics:
+          - id: "1.3.1"
+            type: "QlM"
+            verify_type: true
+            text: "Institution integrates crosscutting issues relevant to Professional Ethics, Gender, Human Values, Environment and Sustainability, Human Values."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "1.3.2"
+            type: "QnM"
+            verify_type: true
+            text: "Number of value-added courses imparting transferable and life skills offered during the last five years (10) (Data Template 1.3.2 and 1.3.3 Combined) 1.3.3Avarage Percentage of students enrolled in the (10) courses under 1.3.2 above Year -1."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "1.3.3"
+            type: "QnM"
+            verify_type: true
+            text: "Average Percentage of students enrolled in the courses under 1.3.2 above."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "1.3.4"
+            type: "QnM"
+            verify_type: true
+            text: "Percentage of students undertaking field projects/ internships / student projects (Data for the latest completed academic year) (10) Programme Program Names of Students undertaking field Link of the relevant name Code projects/internships / student projects document."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "1.4"
+        name: "Feedback System"
+        metrics:
+          - id: "1.4.1"
+            type: "QlM"
+            verify_type: true
+            text: "Structured feedback for design and review of syllabus ( semester wise / year wise) is obtained from 1) Students, 2) Teachers, 3) Employers, 4) Alumni."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "1.4.2"
+            type: "QlM"
+            verify_type: true
+            text: "The feedback system of the Institution comprises of the following :."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+  - id: "2"
+    name: "Teaching-Learning and Evaluation"
+    key_indicators:
+      - id: "2.1"
+        name: "Student Enrolment and Profile"
+        metrics:
+          - id: "2.1.1"
+            type: "QnM"
+            verify_type: true
+            text: "Average Enrolment percentage (Average of last five years) (10)"
+            data_requirements:
+              - "2.1.1.1: Number of seats available year-wise during last five years"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "2.1.2"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage of seats filled against reserved categories (SC, ST, OBC, Divyangjan, etc. as per applicable reservation policy ) during the last five years ( exclusive of supernumerary seats) (10) Year Number of seats earmarked for Number of students admitted from the reserved category as per GOI or State reserved category Government rule SC ST OBC Divyangjan Gen Others SC ST OBC Divyangjan Gen Others."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "2.2"
+        name: "Catering to Student Diversity"
+        metrics:
+          - id: "2.2.2"
+            type: "QnM"
+            verify_type: true
+            text: "Student - Full time teacher ratio (Data for the latest completed academic year)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "2.3"
+        name: "Teaching-Learning Process"
+        metrics:
+          - id: "2.3.1"
+            type: "QnM"
+            verify_type: true
+            text: "Student centric methods, such as experiential learning, participative learning and problem solving methodologies are used for enhancing."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "2.3.2"
+            type: "QlM"
+            verify_type: true
+            text: "Teachers use ICT enabled tools including online resources for effective teaching and learning process."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "2.3.3"
+            type: "QnM"
+            verify_type: true
+            text: "Ratio of students to mentor for academic and other related issues (Data for the latest completed academic year )"
+            data_requirements:
+              - "2.3.3.1: Number of mentors"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "2.3.4"
+            type: "QlM"
+            verify_type: true
+            text: "Preparation and adherence of Academic Calendar and Teaching plans by the institution."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "2.4"
+        name: "Teacher Profile and Quality"
+        metrics:
+          - id: "2.4.1"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage of full time teachers against sanctioned posts during the last five years (15) &."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "2.4.2"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage of full time teachers with Ph.D. / D.M. / M.Ch. / D.N.B Super speciality / D.Sc. / D.Litt. during the last five years."
+            data_requirements:
+              - "2.4.2.1: Number of full time teachers with Ph.D./ D.M. / M.Ch. /"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "2.4.3"
+            type: "QnM"
+            verify_type: true
+            text: "Average teaching experience of full time teachers in the same institution (Data for the latest completed academic year in number of years) (15)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "2.5"
+        name: "Evaluation Process and Reforms"
+        metrics:
+          - id: "2.5.1"
+            type: "QnM"
+            verify_type: true
+            text: "Average number of days from the date of last sem ester-end/ year- end examination till the declaration of results during the last five years (20)"
+            data_requirements:
+              - "2.5.1.1: Number of days from the date of last semester-end/ year- end examination till the declaration of"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "2.5.2"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage of student complaints/grievances about evaluation against total number appeared in the examinations during the last five years."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "2.5.3"
+            type: "QlM"
+            verify_type: true
+            text: "IT integration and reforms in the examination procedures and processes including Continuous Internal Assessment (CIA) have."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "2.6"
+        name: "Student Performance and Learning Outcomes"
+        metrics:
+          - id: "2.6.1"
+            type: "QlM"
+            verify_type: true
+            text: "Programme outcomes and course outcomes for all Programmes offered by the institution are stated and displayed on website and communicated to teachers and students."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "2.6.2"
+            type: "QlM"
+            verify_type: true
+            text: "Attainment of program outcomes and course outcomes are evaluated by the institution."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "2.6.3"
+            type: "QlM"
+            verify_type: true
+            text: "Pass percentage of students (Data for the latest completed academic year) (20) Programme Programme Number of students appeared for in Number of students passed code name the final year examination in the final year examination."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "2.7"
+        name: "Student Satisfaction Survey"
+        metrics:
+          - id: "2.7.1"
+            type: "QlM"
+            verify_type: true
+            text: "Online student satisfaction survey regarding to teaching learning process.(50) (Online Survey to be conducted ) Name of Gender Category State of Nationality E mail Program Student Mobile Year of the Domicile (if other ID name Number joining Student than Unique Indian) Enrolment ID Copyright Reg. No: L-94551/2020 Manual for Autonomous Colleges Criterion – 3 Research Innovations and Extensions (100)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+  - id: "3"
+    name: "Research, Innovations and Extension"
+    key_indicators:
+      - id: "3.1"
+        name: "Promotion of Research and Facilities"
+        metrics:
+          - id: "3.1.1"
+            type: "QlM"
+            verify_type: true
+            text: "The institution Research facilities are frequently updated and there is well defined policy for promotion of research which is uploaded on the institutional website and implemented."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.1.2"
+            type: "QlM"
+            verify_type: true
+            text: "The institution provides seed money to its teachers for research (Average per year) (8), 3.1.2.1: The amount of seed money provided by institution to its teachers for research year wise during last five years (INR in lakhs)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.1.3"
+            type: "QnM"
+            verify_type: true
+            text: "Percentage of teachers awarded national/ international fellowship for advanced studies/ research during the last five years (6)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "3.2"
+        name: "Resource Mobilization for Research"
+        metrics:
+          - id: "3.2.1"
+            type: "QlM"
+            verify_type: true
+            text: "Grants received from Government and non-governmental agencies for research projects, endowments, Chairs in the institution during the last five years (INR in Lakhs) (2) & 3.2.2 Percentage of teachers having research projects during the last five years (2) 3.2.4 Average Percentage of departments having Research projects funded by government and non government agencies during the last five years (3)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.2.2"
+            type: "QnM"
+            verify_type: true
+            text: "Percentage of teachers having research projects during the last five years."
+            data_requirements:
+              - "3.2.2.1: Number of teachers having research projects during the last"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.2.3"
+            type: "QnM"
+            verify_type: true
+            text: "Percentage of teachers recognised as research guides • Names of teachers having research projects •."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.2.4"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage of departments having Research projects funded by government and non-government agencies during the."
+            data_requirements:
+              - "3.2.4.1: Number of departments having Research projects funded by"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "3.3"
+        name: "Innovation Ecosystem"
+        metrics:
+          - id: "3.3.1"
+            type: "QlM"
+            verify_type: true
+            text: "Institution has created an eco system for innovations, creation and transfer of knowledge supported by dedicated centers for research."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.3.2"
+            type: "QnM"
+            verify_type: true
+            text: "Number of workshops/seminars conducted on Research Methodology, Intellectual Property Rights (IPR), entrepreneurship and skills development during the last five years (5)"
+            data_requirements:
+              - "3.3.2.1: Total number of workshops/seminars conducted on Research Methodology, Intellectual Property"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "3.4"
+        name: "Research Publications and Awards"
+        metrics:
+          - id: "3.4.1"
+            type: "QlM"
+            verify_type: true
+            text: "The Institution ensures implementation of its stated Code of Ethics for research through the following:."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.4.2"
+            type: "QlM"
+            verify_type: true
+            text: "Numbe r of Ph.D’s registered per teacher (as per the data given w.r.t recognized Ph.D guides/ supervisors provided at 3.2.3 metric) during the last five years."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.4.3"
+            type: "QnM"
+            verify_type: true
+            text: "Number of research papers per teacher in the Journals notified on UGC website during the last five years (5) Title Name of Department of the of the Name of Year of ISSN Link to the recognition in UGC enlistment paper author/s teacher journal publication number of the Journal Link to website Link to Is it listed in of the Journal article/paper/UGC Care abstract of list/Scopus/Web the article of Science/other, mention."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.4.4"
+            type: "QnM"
+            verify_type: true
+            text: "Number of books and chapters in edited volumes/books published per teacher during the last five years (5)"
+            data_requirements:
+              - "3.4.4.1: Total number of books and chapters in edited volumes / books published, and papers in"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.4.5"
+            type: "QlM"
+            verify_type: true
+            text: "Bibliometrics of the publications during the last five years based on average Citation index in Scopus/ Web of Science/ PubMed."
+            data_requirements:
+              - "3.4.5.1: Total number of Citations in Scopus in 5 years"
+              - "3.4.5.2: : Total number of Publications in Scopus in 5 years"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.4.6"
+            type: "QlM"
+            verify_type: true
+            text: "Bibliometrics of the publications during the last five years based on Scopus/ Web of Science – h-index of the Institution."
+            data_requirements:
+              - "3.4.6.1: h-index of Scopus during the last five years"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "3.5"
+        name: "Consultancy"
+        metrics:
+          - id: "3.5.1"
+            type: "QlM"
+            verify_type: true
+            text: "Revenue generated from consultancy and corporate training during the last five years (INR in Lakhs) (5)"
+            data_requirements:
+              - "3.5.1.1: Total amount generated from consultancy and corporate training year wise during last five y ears (INR in"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.5.2"
+            type: "QnM"
+            verify_type: true
+            text: "Total amount spent on developing facilities, training teachers and staff for undertaking consultancy during the last five years (5) Revenue generated from consultancy during the last five years Name of."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "3.6"
+        name: "Extension Activities"
+        metrics:
+          - id: "3.6.1"
+            type: "QlM"
+            verify_type: true
+            text: "Extension activities are carried out in the neighbourhood community, sensitising students to social issues, for their holistic."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.6.2"
+            type: "QnM"
+            verify_type: true
+            text: "Number of awards and recognition received by the Institution, its teachers and students for extension activities from Government / Government recognised bodies during last five years (15) Name of."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.6.3"
+            type: "QnM"
+            verify_type: true
+            text: "Number of extension and outreach programs conducted by the institution through NSS/NCC/Red cross/YRC etc., during the last."
+            data_requirements:
+              - "3.6.3.1: Number of extension and outreach programs conducted in"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.6.4"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage of students participating in extension activities listed at 3.6.3 above during the last five years."
+            data_requirements:
+              - "3.6.4.1: Total number of students participating in extension activities"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "3.7"
+        name: "Collaboration"
+        metrics:
+          - id: "3.7.1"
+            type: "QnM"
+            verify_type: true
+            text: "Number of Collaborative activities per year for research/ faculty exchange/ student exchange/ internship/ on –the-job training/ project work (10) 3.7.1.1:Total number of Collaborative activities per year for research/ faculty exchange/ student exchange/ internship/ on –the-job training/ project work Sl. Title of the."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "3.7.2"
+            type: "QnM"
+            verify_type: true
+            text: "Number of functional MoUs with institutions of national, international importance, other."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+  - id: "4"
+    name: "Infrastructure and Learning Resources"
+    key_indicators:
+      - id: "4.1"
+        name: "Physical Facilities"
+        metrics:
+          - id: "4.1.1"
+            type: "QlM"
+            verify_type: true
+            text: "The Institution has adequate infrastructure and physical facilities for teaching – learning, viz., classrooms, laboratories, computing."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "4.1.2"
+            type: "QlM"
+            verify_type: true
+            text: "The institution has adequate facilities for cultural activities, yoga, games (indoor, outdoor) and sports. (gymnasium, yoga centre."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "4.1.3"
+            type: "QnM"
+            verify_type: true
+            text: "Percentage of classrooms and seminar halls with ICT – enabled facilities such as smart class, LMS, universities, industries, corporate houses etc. during the last five years (only functional MoUs with etc. (Data for the latest completed academic year) (10) ongoing activities to be considered) (10) R O o r o g m an n is u a m tio b n e r or N N a a m m e e o f o t f h e institution T / ype Y o e f a I r C T o f f a ci"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "4.1.4"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage of expenditure for infrastructure augmentation excluding salary during the last five years (INR in Lakhs) (10) and."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "4.2"
+        name: "Library as a Learning Resource"
+        metrics:
+          - id: "4.2.1"
+            type: "QlM"
+            verify_type: true
+            text: "Library is automated using Integrated Library Management System (ILMS)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "4.2.2"
+            type: "QlM"
+            verify_type: true
+            text: "Institution has access to the following: 1. 1. e-journals 2. e-ShodhSindhu 3. Shodhganga Membership 4. e-books 5. Databases 6. Remote access to e-resources &."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "4.2.3"
+            type: "QnM"
+            verify_type: true
+            text: "Average annual expenditure for purchase of books/ e-books and subscription to journals/e-journals during the last five years (INR in Lakhs) (5) Library If yes, Details of Expenditure on subscription for the Total Library Link to the relevant resources memberships/ resources (INR in lakhs) Expenditure document subscriptions Books Journals e – journals e-books e-ShodhSindhu Shodhganga Databases Local and / or Remote ac"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "4.2.4"
+            type: "QnM"
+            verify_type: true
+            text: "Percentage per day usage of library by teachers and students ( foot falls and login data for online access)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "4.3"
+        name: "IT Infrastructure"
+        metrics:
+          - id: "4.3.1"
+            type: "QlM"
+            verify_type: true
+            text: "Institution has an IT policy covering wi-fi, cyber security, etc., and allocated budget for updating its IT facilities Describe IT facilities including Wi-Fi with date and nature of."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "4.3.2"
+            type: "QnM"
+            verify_type: true
+            text: "Student - Computer ratio(Data for the latest completed academic year)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "4.3.3"
+            type: "QlM"
+            verify_type: true
+            text: "Ban•d wiSdttuhd oefn ti n- tceornmept uctoenr nraetcioti on in the Institution."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "4.3.4"
+            type: "QlM"
+            verify_type: true
+            text: "Institution has Facilities for e-content development Enumerate Facilities for e-content development such as 1. Media centre, 2. Audio-visual centre, 3. Lecture Capturing System (LCS), 4. Mixing equipments, and softwares for editing (4) Copyright Reg. No: L-94551/2020 Manual for Autonomous Colleges Name of."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "4.4"
+        name: "Maintenance of Campus Infrastructure"
+        metrics:
+          - id: "4.4.1"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage expenditure incurred on maintenance of physical facilities and academic support facilities excluding salary component during the last five years (INR in lakhs) (10) Copyright Reg. No: L-94551/2020 Manual for Autonomous Colleges Year Budget Expenditure for Total Expenditure on Expenditure on allocated for infrastructure expenditure maintenance of academic maintenance of physical infrastructure augme"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "4.4.2"
+            type: "QlM"
+            verify_type: true
+            text: "There are established s y s t e m s a n d procedures for maintaining and utilizing physical, academic and support facilities – laboratory."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+  - id: "5"
+    name: "Student Support and Progression"
+    key_indicators:
+      - id: "5.1"
+        name: "Student Support"
+        metrics:
+          - id: "5.1.1"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage of students benefited by scholarships and free ships provided by the Government during the last five years (6)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "5.1.2"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage of students benefited by scholarships, freeships, etc. provided by the institution and non-government agencies during the last five years (5) Name of Number of Number of students Number of students benefited by Link to Year the students benefited benefited by the the non-government agencies relevant (NGOs) by government institution's document scheme and amount scheme and schemes and amount amount N"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "5.1.3"
+            type: "QlM"
+            verify_type: true
+            text: "Following Capacity development and skills enhancement activities are organised for improving students capability (8) 1. Soft skills, 2. Language and communication skills, 3. Life skills (Yoga, physical fitness, health and hygiene), 4. Awareness of trends in technology."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "5.1.4"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage of students benefited by guidance for competitive examinations and career counselling offered by the institution during the last five years (6) Year."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "5.1.5"
+            type: "QlM"
+            verify_type: true
+            text: "The institution adopts the following for redressal of student grievances including sexual harassment and ragging cases."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "5.2"
+        name: "Student Progression"
+        metrics:
+          - id: "5.2.1"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage of placement of outgoing students during the last five years (10) Year Name of student Program graduated from."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "5.2.2"
+            type: "QnM"
+            verify_type: true
+            text: "Percentage of student progression to higher education (previous graduating batch)(10) Name of student enrolling into Program Name of Name of programme admitted to higher education graduated from institution joined Copyright Reg. No: L-94551/2020 Manual for Autonomous Colleges."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "5.2.3"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage of students qualifying in State/National/ International level examinations during the last five years (eg: IIT/JAM/NET/SLET/GATE/GMAT/CAT/ GRE/TOEFL/ IELTS/ Civil Services/State government examinations etc.) (10) Year Registratio Number of students selected/ qualifying n number/roll number for the exam NET IIT SLET GATE GMAT CAT GRE JAM IELTS TOEFL Civil State Other examinations Services conducted "
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "5.3"
+        name: "Student Participation and Activities"
+        metrics:
+          - id: "5.3.1"
+            type: "QnM"
+            verify_type: true
+            text: "Number of awards/medals for outstanding performance in sports/cultural activities at inter-university / state /national / international events (award for a team event should be counted as one) during the last five years (10) Year Name of Team / Individual inter-university / state."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "5.3.2"
+            type: "QlM"
+            verify_type: true
+            text: "Presence of an active Student Council & representation of students on academic & administrative bodies/committees of the institution."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "5.3.3"
+            type: "QnM"
+            verify_type: true
+            text: "Average number of sports and cultural events / competitions organised by the institution per year (10) Year Date of event/competition (DD-MM-YYYY)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "5.4"
+        name: "Alumni Engagement"
+        metrics:
+          - id: "5.4.1"
+            type: "QlM"
+            verify_type: true
+            text: "The Alumni Association/Chapters (registered and functional)contributes significantly to the development of the."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "5.4.2"
+            type: "QlM"
+            verify_type: true
+            text: "Alumni financial contribution during the last five years (in INR)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+  - id: "6"
+    name: "Governance, Leadership and Management"
+    key_indicators:
+      - id: "6.1"
+        name: "Institutional Vision and Leadership"
+        metrics:
+          - id: "6.1.1"
+            type: "QlM"
+            verify_type: true
+            text: "The governance of the institution is reflective of an effective leadership in tune with the vision and mission of the Institution."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "6.1.2"
+            type: "QlM"
+            verify_type: true
+            text: "The effective leadership is reflected in various institutional practices such as decentralization and participative management."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "6.2"
+        name: "Strategy Development and Deployment"
+        metrics:
+          - id: "6.2.1"
+            type: "QlM"
+            verify_type: true
+            text: "The institutional Strategic/ Perspective plan is effectively deployed Describe one activity successfully implemented based on the strategic."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "6.2.2"
+            type: "QlM"
+            verify_type: true
+            text: "The functioning of the institutional bodies is effective and efficient as visible from policies, administrative setup appointment and."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "6.2.3"
+            type: "QlM"
+            verify_type: true
+            text: "Implementation of e-governance in areas of operation (4) 1. Administration 2. Finance and Accounts 3. Student Admission and Support 4. Examination."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "6.3"
+        name: "Faculty Empowerment Strategies"
+        metrics:
+          - id: "6.3.1"
+            type: "QlM"
+            verify_type: true
+            text: "The institution has effective welfare measures for teaching and non-teaching staff and avenues for career development/."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "6.3.2"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage of teachers provided with financial support to attend conferences / workshops and towards membership fee of professional bodies during the last five years (8) Year Name of Name of conference/ workshop."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "6.3.3"
+            type: "QnM"
+            verify_type: true
+            text: "Average number of professional development / administrative training programs organized by the Institution for teaching and non teaching staff during the last five years (8) Dates (from-to) (DD-MM-YYYY) Title of the professional development/ administrative training No. of participants programs organised for teaching staff (Professional development/ administrative training programs)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "6.3.4"
+            type: "QnM"
+            verify_type: true
+            text: "Average percentage of teachers undergoing online/ face-to-face Faculty Development Programmes during the last five years (Professional Development Programmes, Orientation / Induction Programmes, Refresher Course, Short Term Course etc.,) (10) Name of teacher who Title of the Program Duration (from – to) (DD-MM-YYYY) attended the program."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "6.4"
+        name: "Financial Management and Resource Mobilization"
+        metrics:
+          - id: "6.4.1"
+            type: "QlM"
+            verify_type: true
+            text: "Institution conducts internal and external financial audits regularly."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "6.4.2"
+            type: "QlM"
+            verify_type: true
+            text: "Funds / Grants received from non-government bodies, individuals, philanthropists during the last five years (not covered in Criterion III and V) (INR in Lakhs) (10)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "6.4.3"
+            type: "QlM"
+            verify_type: true
+            text: "Institutional strategies for mobilisation of funds and the optimal utilisation of resources."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "6.5"
+        name: "Internal Quality Assurance System (IQAS)"
+        metrics:
+          - id: "6.5.1"
+            type: "QlM"
+            verify_type: true
+            text: "Internal Quality Assurance Cell (IQAC) has contributed significantly for institutionalizing the quality assurance strategies."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "6.5.2"
+            type: "QlM"
+            verify_type: true
+            text: "The institution reviews its teaching learning process, structures & methodologies of operations and learning outcomes at periodic."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "6.5.3"
+            type: "QlM"
+            verify_type: true
+            text: "Quality assurance initiatives of the institution include: (10) 1. Regular meeting of Internal Quality Assurance Cell (IQAC); Feedback collected, analysed and used for improvements 2. Collaborative quality initiatives with other institution(s) 3. Participation in NIRF 4. Any other quality audit recognized by state, national or international agencies (ISO Certification) Year ConferenceAcademic Participation in Any othe"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+  - id: "7"
+    name: "Institutional Values and Best Practices"
+    key_indicators:
+      - id: "7.1"
+        name: "Institutional Values and Social Responsibilities"
+        metrics:
+          - id: "7.1.1"
+            type: "QlM"
+            verify_type: true
+            text: "Measures initiated by the Institution for the promotion of gender equity during the last five years. Describe gender equity & sensitization in curricular and co-curricular activities."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "7.1.2"
+            type: "QlM"
+            verify_type: true
+            text: "The Institution has facilities for alternate sources of energy and energy conservation measures."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "7.1.3"
+            type: "QlM"
+            verify_type: true
+            text: "Describe the facilities in the Institution for the management of the following types of degradable and non-degradable waste."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "7.1.4"
+            type: "QlM"
+            verify_type: true
+            text: "Water conservation facilities available in the Institution: 1. Rain water harvesting 2. Borewell /Open well recharge."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "7.1.5"
+            type: "QlM"
+            verify_type: true
+            text: "Green campus initiatives include (4)"
+            data_requirements:
+              - "7.1.5.1: The institutional initiatives for greening the campus are as follows:"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "7.1.6"
+            type: "QlM"
+            verify_type: true
+            text: "Quality audits on environment and energy are regularly undertaken by the institution (5)"
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "7.1.7"
+            type: "QlM"
+            verify_type: true
+            text: "The Institution has disabled-friendly, barrier free environment 1. Built environment with ramps/lifts for easy access to classrooms. 2. Disabled-friendly washrooms."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "7.1.8"
+            type: "QlM"
+            verify_type: true
+            text: "Describe the Institutional efforts/initiatives in providing an inclusive Copyright Reg. No: L-94551/2020 Manual for Autonomous Colleges environment i.e., tolerance and harmony towards cultural, regional, linguistic, communal socioeconomic and other diversities."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "7.1.9"
+            type: "QlM"
+            verify_type: true
+            text: "Sensitization of students and employees of the Institution to the constitutional obligations: values, rights, duties and responsibilities of citizens Describe the various activities in the Institution for inculcating values for being."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "7.1.10"
+            type: "QlM"
+            verify_type: true
+            text: "The Institution has a prescribed code of conduct for students, teachers, administrators and other staff and conducts periodic programmes in this."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+          - id: "7.1.11"
+            type: "QlM"
+            verify_type: true
+            text: "Institution celebrates / organizes national and international commemorative days, events and festivals."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "7.2"
+        name: "Best Practices"
+        metrics:
+          - id: "7.2.1"
+            type: "QlM"
+            verify_type: true
+            text: "Describe two best practices successfully implemented by the Institution as per NAAC format provided in the Manual."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
+      - id: "7.3"
+        name: "Institutional Distinctiveness"
+        metrics:
+          - id: "7.3.1"
+            type: "QlM"
+            verify_type: true
+            text: "Portray the performance of the Institution in one area distinctive to its priority and thrust."
+            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
