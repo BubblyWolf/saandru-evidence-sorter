@@ -15,17 +15,53 @@ OCR_TEXT_PER_PAGE_THRESHOLD = 40  # avg chars/page below this => treat PDF as sc
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 
 
+# Standard places the Tesseract binary lands on Windows when it is NOT on PATH.
+# Checked as a fallback so OCR still works on a college PC where the installer
+# ran but PATH was never updated (a very common fieldwork situation).
+_TESSERACT_FALLBACK_PATHS = (
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+    os.path.join(os.environ.get("LOCALAPPDATA", ""),
+                 r"Programs\Tesseract-OCR\tesseract.exe"),
+)
+
+
+def _resolve_tesseract_binary():
+    """Return a full path to the tesseract binary, or None. Checks PATH first,
+    then the standard Windows install folders. Never raises."""
+    try:
+        on_path = shutil.which("tesseract")
+        if on_path:
+            return on_path
+    except Exception:
+        pass
+    for candidate in _TESSERACT_FALLBACK_PATHS:
+        try:
+            if candidate and os.path.isfile(candidate):
+                return candidate
+        except Exception:
+            continue
+    return None
+
+
 def _tesseract_available():
     """Return True only if BOTH pytesseract is importable AND the tesseract
-    binary is on PATH. Never raises."""
+    binary can be found (PATH or a known install folder). If the binary is
+    found off-PATH, point pytesseract at it. Never raises."""
     try:
-        import pytesseract  # noqa: F401
+        import pytesseract
     except Exception:
         return False
-    try:
-        return shutil.which("tesseract") is not None
-    except Exception:
+    binary = _resolve_tesseract_binary()
+    if not binary:
         return False
+    try:
+        # Only override if pytesseract's default ("tesseract") isn't on PATH.
+        if shutil.which("tesseract") is None:
+            pytesseract.pytesseract.tesseract_cmd = binary
+    except Exception:
+        pass
+    return True
 
 
 def _ocr_image(pil_image):
