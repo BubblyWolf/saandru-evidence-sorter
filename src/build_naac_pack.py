@@ -77,10 +77,76 @@ def esc(s):
     s = re.sub(r"\s+", " ", s).strip()
     return s.replace('"', "'")
 
+# ---- boilerplate stripper ----
+# In the source manual, each metric is: ONE substantive sentence/paragraph describing what
+# is being asked, followed by SSR-portal form furniture (weightage number, "QM"/"QnM"/"QlM"
+# type glyphs, "Write/Upload/Describe ... 500 words" instructions, "File Description /
+# Upload / Link for additional information" prompts, "Options: A...E" MCQ scaffolding, and
+# data-entry table column headers like "Name of the... Year of... Sl. No....").
+# The PDF-text extraction collapses all of this onto one line per metric. Rather than try to
+# regex out each scattered fragment (fragile -- leaves orphan words like a stray "l" bullet),
+# we find the EARLIEST point where form furniture starts and cut everything from there. This
+# is robust because the furniture phrases never appear inside the genuine metric sentence.
+WB = r"(?<![A-Za-z])"   # left-side word-boundary substitute
+NB = r"(?![A-Za-z])"    # right-side word-boundary substitute
+CUT_TRIGGERS = [
+    WB + "Write description",
+    WB + "Upload (?:a )?description",
+    WB + r"Q\s*[nl]?\s*M\s*[nl]?" + NB,   # QM / QnM / QlM / "Q M n" / "Q n M" / "Q l M"
+    "",                          # PDF private-use bullet glyph
+    WB + "File Description",
+    WB + "Upload",
+    WB + r"(?:Link|Paste link|URL)\s*for",
+    WB + "Any additional information",
+    WB + "Any other information",
+    WB + "Data Requirement",
+    WB + r"Options:\s*A\.",
+    WB + "Geotagged [Pp]hotographs?",
+    WB + r"within (?:a )?(?:maximum(?: of)?|minimum(?: of)?)? ?\d+ words",
+    WB + r"\(within \d+ words\)",
+    # data-entry table column-header runs, e.g. "Sl. No. Name of the... Year of..."
+    WB + r"(?:Sl\.?\s*No\.?|Name of the|Programme Code|Program Code)",
+]
+CUT_RE = re.compile("|".join(CUT_TRIGGERS))
+
+
+def clean_metric_text(raw):
+    """Keep only the substantive sentence(s) before SSR-portal form furniture begins."""
+    s = raw
+    m = CUT_RE.search(s)
+    if m and m.start() > 20:   # keep at least a minimal real sentence before cutting
+        s = s[:m.start()]
+    # drop a bare leftover weightage number at the very end, e.g. "...within 5"
+    s = re.sub(r"\s+\d{1,2}\s*$", "", s)
+    # drop stray PDF-extraction mangled-encoding placeholder char
+    s = s.replace("�", "")
+    s = re.sub(r"\s+", " ", s).strip()
+    s = s.rstrip(" .,-–—")
+    if s and not s.endswith((".", ")")):
+        s += "."
+    return s
+
+
+# ---- clean texts + drop duplicate-text metrics (keep the lower id) ----
+seen_text = {}   # normalized cleaned text -> id already kept
+dupe_ids = set()
+for mid in sorted(metrics, key=lambda k: [int(x) for x in k.split(".")]):
+    metrics[mid]["text"] = clean_metric_text(metrics[mid]["text"])
+    norm = re.sub(r"\s+", " ", metrics[mid]["text"]).strip().lower()
+    if not norm:
+        continue
+    if norm in seen_text:
+        dupe_ids.add(mid)  # later (higher) id is the duplicate; sorted ascending so seen_text holds the lower id
+    else:
+        seen_text[norm] = mid
+for mid in dupe_ids:
+    del metrics[mid]
+
 # ---- emit YAML ----
 out = []
 out.append("# NAAC criteria pack - Affiliated/Constituent UG & PG Colleges (RAF, manual ver. 1.3.2021)")
 out.append("# Source: official manual (reference/NAAC_Affiliated_College_Manual.pdf). Auto-parsed; texts trimmed to ~420 chars.")
+out.append("# Form/table boilerplate (Upload/File Description/Options/table headers) stripped; duplicate-text metrics dropped (lower id kept).")
 out.append("# type: heuristic QnM/QlM (verify_type: true = hand-check against the manual tables before release).")
 out.append("# NOTE: NAAC Binary/MBGL (10 attributes) announced 2025 but portal not live as of 2026-06; this RAF pack is what colleges currently use.")
 out.append("pack: naac_affiliated_raf2021")
@@ -111,5 +177,6 @@ for cid in sorted(CRITERIA):
                     out.append(f'              - "{esc(s)[:200]}"')
             out.append(f"            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)")
 open(OUT, "w", encoding="utf-8").write("\n".join(out) + "\n")
-print(f"criteria: {len(CRITERIA)} | key indicators: {len({m.rsplit('.',1)[0] for m in metrics})} | metrics: {len(metrics)}")
+print(f"criteria: {len(CRITERIA)} | key indicators: {len({m.rsplit('.',1)[0] for m in metrics})} | "
+      f"metrics: {len(metrics)} | dropped duplicates: {len(dupe_ids)} ({', '.join(sorted(dupe_ids)) or '-'})")
 print("wrote", OUT)

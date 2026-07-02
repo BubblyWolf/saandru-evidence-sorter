@@ -30,11 +30,12 @@ def main():
                "Status", "Evidence quote", "Top-3 candidates"])
 
     rows, correct_crit, correct_metric, scored = [], 0, 0, 0
+    auto_count, auto_correct_crit, review_count = 0, 0, 0
     print(f"\nClassifying {len(files)} documents...\n" + "-" * 78)
     for fn in files:
         t0 = time.time()
         text = read_document(os.path.join(FOLDER, fn))
-        r = classify(text, metrics, metric_vecs)
+        r = classify(text, metrics, metric_vecs, filename=fn)
         c = r["chosen"]
         crit = c["criterion"] if c else "-"
         mid = c["id"] if c else "NONE"
@@ -42,12 +43,19 @@ def main():
                    r["confidence"], r["status"], r["evidence"][:120],
                    ", ".join(r["candidates"])])
         dt = time.time() - t0
+        if r["status"] == "auto":
+            auto_count += 1
+        else:
+            review_count += 1
         flag = ""
         if fn in gt:
             scored += 1
             tc, tm = gt[fn]["true_criterion"], gt[fn]["true_metric"]
             if tc != "?":
-                if crit == tc: correct_crit += 1; flag += "C"
+                if crit == tc:
+                    correct_crit += 1; flag += "C"
+                    if r["status"] == "auto":
+                        auto_correct_crit += 1
                 if mid == tm: correct_metric += 1; flag += "M"
                 flag = f"[crit={'OK' if crit==tc else 'X'} metric={'OK' if mid==tm else 'X'}]"
             else:
@@ -65,7 +73,13 @@ def main():
         print(f"\nACCURACY on {labeled} labeled docs:  "
               f"criterion {correct_crit}/{labeled} ({100*correct_crit//max(labeled,1)}%)  |  "
               f"exact metric {correct_metric}/{labeled} ({100*correct_metric//max(labeled,1)}%)")
-    auto = sum(1 for row in [] )  # placeholder
+
+    # honest headline: of the documents the tool actually COMMITTED to (status=auto), how many
+    # were right, versus how many it abstained on (status=review, i.e. handed to a human).
+    committed_pct = (100 * auto_correct_crit // auto_count) if auto_count else 0
+    print(f"COMMITTED (status=auto): {auto_count}/{len(files)} docs, "
+          f"{auto_correct_crit}/{auto_count if auto_count else 1} correct on criterion "
+          f"({committed_pct}%)  |  ABSTAINED (status=review): {review_count}/{len(files)}")
 
 
 if __name__ == "__main__":

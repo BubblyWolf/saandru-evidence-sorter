@@ -1,5 +1,6 @@
 # NAAC criteria pack - Affiliated/Constituent UG & PG Colleges (RAF, manual ver. 1.3.2021)
 # Source: official manual (reference/NAAC_Affiliated_College_Manual.pdf). Auto-parsed; texts trimmed to ~420 chars.
+# Form/table boilerplate (Upload/File Description/Options/table headers) stripped; duplicate-text metrics dropped (lower id kept).
 # type: heuristic QnM/QlM (verify_type: true = hand-check against the manual tables before release).
 # NOTE: NAAC Binary/MBGL (10 attributes) announced 2025 but portal not live as of 2026-06; this RAF pack is what colleges currently use.
 pack: naac_affiliated_raf2021
@@ -15,19 +16,14 @@ criteria:
           - id: "1.1.1"
             type: "QlM"
             verify_type: true
-            text: "The Institution ensures effective curriculum delivery through a well planned and documented process Write description of initiatives in not more than 500 words QM File Description l  Upload Additional information  Link for Additional information"
+            text: "The Institution ensures effective curriculum delivery through a well planned and documented process."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "1.1.2"
             type: "QlM"
             verify_type: true
-            text: "The institution adheres to the academic calendar including for the conduct of CIE Write description in maximum of 500 words QM File Description l  Upload Additional information  Link for Additional information"
+            text: "The institution adheres to the academic calendar including for the conduct of CIE."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "1.1.3"
-            type: "QlM"
-            verify_type: true
-            text: "Teachers of the Institution participate in following activities related to curriculum development and assessment of the affiliating University and/are represented on the following academic bodies during the last five years (5) 1. Academic council/BoS of Affiliating university 2. Setting of question papers for UG/PG programs 3. Design and Development of Curriculum for Add on/ certificate/ Diploma Courses 4. Assessment"
-            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
-          - id: "1.1.6"
             type: "QlM"
             verify_type: true
             text: "Teachers of the Institution participate in following activities related to curriculum development and assessment of the affiliating University and/are represented on the following academic bodies during the last five years (5) 1. Academic council/BoS of Affiliating university 2. Setting of question papers for UG/PG programs 3. Design and Development of Curriculum for Add on/ certificate/ Diploma Courses 4. Assessment"
@@ -38,7 +34,7 @@ criteria:
           - id: "1.2.1"
             type: "QnM"
             verify_type: true
-            text: "Percentage of programs in which Choice Based Credit System (CBCS)/elective course system has been implemented (10) Programme Code Programme name Year of Introduction Status of implementation of Year of implementation Link to the relevant document CBCS / elective course of CBCS / elective course system (Yes/No) system"
+            text: "Percentage of programs in which Choice Based Credit System (CBCS)/elective course system has been implemented (10)"
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "1.2.2"
             type: "QnM"
@@ -56,17 +52,17 @@ criteria:
           - id: "1.3.1"
             type: "QlM"
             verify_type: true
-            text: "Institution integrates crosscutting issues relevant to Professional Ethics, Gender, Human Values, Environment and Sustainability into 10 the Curriculum QM l Upload a description in maximum of 500 words File Description (Upload)  Any additional information  Upload the list and description of courses which address the Professional Ethics, Gender, Human Values, Environment and Sustainability into the Curriculum."
+            text: "Institution integrates crosscutting issues relevant to Professional Ethics, Gender, Human Values, Environment and Sustainability into 10 the Curriculum."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "1.3.2"
             type: "QnM"
             verify_type: true
-            text: "Average percentage of courses that include experiential learning through project work/field work/internship during last five years (10) Program name Program code Name of the Course that Course Year of Name of the student studied Link to the relevant document include experiential learning code offering course on experiential learning through project work/field through project work/field work/internship work/internship"
+            text: "Average percentage of courses that include experiential learning through project work/field work/internship during last five years (10) Program name Program code."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "1.3.3"
             type: "QnM"
             verify_type: true
-            text: "Percentage of students undertaking project work/field work/internship (Data for the latest completed academic year) (10) Programme name Program Code List of students undertaking project work/field work/internship Link to the relevant document"
+            text: "Percentage of students undertaking project work/field work/internship (Data for the latest completed academic year) (10) Programme name."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "1.4"
         name: "Feedback System"
@@ -74,12 +70,12 @@ criteria:
           - id: "1.4.1"
             type: "QlM"
             verify_type: true
-            text: "Institution obtains feedback on the syllabus and its transaction at the institution from the following stakeholders 2) Students 2)Teachers 3)Employers 4)Alumni Q M n Options: A. All of the above B. Any 3 of the above C. Any 2 of the above D. Any 1 of the above E. None of the above Data Requirement: Report of analysis of feedback received from different stakeholders year wise File Description  URL for stakeholder fee"
+            text: "Institution obtains feedback on the syllabus and its transaction at the institution from the following stakeholders 2) Students 2)Teachers 3)Employers 4)Alumni."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "1.4.2"
             type: "QlM"
             verify_type: true
-            text: "Feedback process of the Institution may be classified as follows: Q M Options: 10 n A. Feedback collected, analysed and action taken and feedback available on website B. Feedback collected, analysed and action has been taken C. Feedback collected and analysed D. Feedback collected E. Feedback not collected Documents: Upload Stakeholders feedback report, Action taken report of the institute on it as stated in the minu"
+            text: "Feedback process of the Institution may be classified as follows:."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
   - id: "2"
     name: "Teaching-Learning and Evaluation"
@@ -90,7 +86,7 @@ criteria:
           - id: "2.1.1"
             type: "QnM"
             verify_type: true
-            text: "Average enrolment Percentage (Average of last five years) (20) Year - 1 Programme name Programme Code Number of seats sanctioned Number of Students admitted Year - 2 Programme name Programme Code Number of seats sanctioned Number of Students admitted Year - 3 Programme name Programme Code Number of seats sanctioned Number of Students admitted Year - 4 Programme name Programme Code Number of seats sanctioned Number of"
+            text: "Average enrolment Percentage (Average of last five years) (20) Year - 1 Programme name."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "2.1.2"
             type: "QnM"
@@ -103,12 +99,12 @@ criteria:
           - id: "2.2.1"
             type: "QlM"
             verify_type: true
-            text: "The institution assesses the learning levels of the students and organises special Programmes for advanced learners and slow 30 learners QM l Write description in maximum of 500 words File Description:  Past link for additional Information  Upload any additional information"
+            text: "The institution assesses the learning levels of the students and organises special Programmes for advanced learners and slow 30 learners."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "2.2.2"
             type: "QnM"
             verify_type: true
-            text: "Student- Full time teacher ratio (Data for the latest completed academic year) Data requirement: Q M  Total number of Students enrolled in the Institution n  Total number of full time teachers in the Institution Formula: Students: teachers File Description (Upload)  Any additional information"
+            text: "Student- Full time teacher ratio (Data for the latest completed academic year) Data requirement:."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "2.3"
         name: "Teaching-Learning Process"
@@ -116,12 +112,12 @@ criteria:
           - id: "2.3.1"
             type: "QnM"
             verify_type: true
-            text: "Student centric methods, such as experiential learning, participative learning and problem solving methodologies are used for enhancing learning experiences QM l Upload a description in maximum of 500 words File Description:  Upload any additional information  Link for additional information"
+            text: "Student centric methods, such as experiential learning, participative learning and problem solving methodologies are used for enhancing learning experiences."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "2.3.2"
             type: "QlM"
             verify_type: true
-            text: "Teachers use ICT enabled tools for effective teaching-learning process. Write description in maximum of 500 words QM File Description l  Upload any additional information  Provide link for webpage describing the ICT enabled tools for effective teaching-learning process"
+            text: "Teachers use ICT enabled tools for effective teaching-learning process."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "2.3.3"
             type: "QnM"
@@ -146,7 +142,7 @@ criteria:
           - id: "2.4.3"
             type: "QnM"
             verify_type: true
-            text: "Average teaching experience of full time teachers in the same institution (Data for the latest completed academic year in number of years) (20) Name of the Full- PAN Designation Year of Nature of appointment Name of the Total years of Is the teacher still serving the time teacher appointment (Against Sanctioned post, Department Experience in institution/If not last year of the temporary, permanent) the same service o"
+            text: "Average teaching experience of full time teachers in the same institution (Data for the latest completed academic year in number of years) (20)"
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "2.5"
         name: "Evaluation Process and Reforms"
@@ -154,12 +150,12 @@ criteria:
           - id: "2.5.1"
             type: "QlM"
             verify_type: true
-            text: "Mechanism of internal assessment is transparent and robust in terms of frequency and mode Upload a description not more than 500 words QM l File Description:  Any additional information  Link for additional information"
+            text: "Mechanism of internal assessment is transparent and robust in terms of frequency and mode."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "2.5.2"
             type: "QlM"
             verify_type: true
-            text: "Mechanism to deal with internal/external examination related grievances is transparent, time- bound and efficient Upload a description not more than 500 words QM l File Description:  Any additional information  Link for additional information"
+            text: "Mechanism to deal with internal/external examination related grievances is transparent, time- bound and efficient."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "2.6"
         name: "Student Performance and Learning Outcomes"
@@ -167,17 +163,17 @@ criteria:
           - id: "2.6.1"
             type: "QlM"
             verify_type: true
-            text: "Programme and course outcomes for all Programmes offered by the institution are stated and displayed on website and communicated to teachers and students. QM Describe Course Outcomes (COs) for all Programmes and mechanism of l communication within a minimum of 500 characters and maximum of 500 words File Description:  Upload any additional information  Past link for Additional information  Upload COs for all Progr"
+            text: "Programme and course outcomes for all Programmes offered by the institution are stated and displayed on website and communicated to teachers and students."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "2.6.2"
             type: "QlM"
             verify_type: true
-            text: "Attainment of programme outcomes and course outcomes are evaluated by the institution. Describe the method of measuring the level of attainment of POs , PSOs QM and COs in not more than 500 l File Description:  Upload any additional information  Paste link for Additional information"
+            text: "Attainment of programme outcomes and course outcomes are evaluated by the institution. Describe the method of measuring the level of attainment of POs , PSOs."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "2.6.3"
             type: "QnM"
             verify_type: true
-            text: "Average pass percentage of Students during last five years (30) Year Program Code Program Name Number of students appeared in the final year examination Number of students passed in final year examination 2.7 Student Satisfaction Survey (60)"
+            text: "Average pass percentage of Students during last five years (30) Year."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "2.7"
         name: "Student Satisfaction Survey"
@@ -185,7 +181,7 @@ criteria:
           - id: "2.7.1"
             type: "QlM"
             verify_type: true
-            text: "Online student satisfaction survey regard to teaching learning process (all currently enrolled students). (Online survey to be conducted and details of the students in the format mentioned below should be uploaded). (60) Name of the student Gender Category State of Nationality if Email Program Unique Mobile Year of joining Domicile other than Indian ID name Enrolment ID Number"
+            text: "Online student satisfaction survey regard to teaching learning process (all currently enrolled students). (Online survey to be conducted and details of the students in the format mentioned below should be uploaded). (60)"
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
   - id: "3"
     name: "Research, Innovations and Extension"
@@ -206,7 +202,7 @@ criteria:
           - id: "3.1.3"
             type: "QnM"
             verify_type: true
-            text: "Percentage of departments having Research projects funded by government and non government agencies during the last five years (5) Name of the Project/ Name of the Department Year of Amount Duration of Name of the Type (Government/non- Endowments, Chairs Principal of Principal Award Sanctioned the project Funding Agency Government) Investigator/Co- Investigator investigator"
+            text: "Percentage of departments having Research projects funded by government and non government agencies during the last five years (5)"
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "3.2"
         name: "Resource Mobilization for Research"
@@ -214,12 +210,12 @@ criteria:
           - id: "3.2.1"
             type: "QnM"
             verify_type: true
-            text: "Number of papers published per teacher in the Journals notified on UGC website during the last five years (5) Title of paper Name of the Department of the Name of journal Year of publication ISSN number Link to the recognition in author/s teacher UGC enlistment of the Journal"
+            text: "Number of papers published per teacher in the Journals notified on UGC website during the last five years (5) Title of paper."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "3.2.2"
             type: "QnM"
             verify_type: true
-            text: "Number of workshops/seminars conducted on Research Methodology, Intellectual Property Rights (IPR) and entrepreneurship during the last five years (5) Year Name of the workshop/ seminar Number of Participants Date From – To Link to the Activity report on the website"
+            text: "Number of workshops/seminars conducted on Research Methodology, Intellectual Property Rights (IPR) and entrepreneurship during the last five years (5) Year."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "3.3"
         name: "Innovation Ecosystem"
@@ -232,17 +228,17 @@ criteria:
           - id: "3.3.2"
             type: "QnM"
             verify_type: true
-            text: "Number of research papers per teachers in the Journals notified on UGC website during the last five years (10) Title of paper Name of the Department of Name of Year of ISSN number Link to the recognition in UGC enlistment of the author/s the teacher journal publication Journal"
+            text: "Number of research papers per teachers in the Journals notified on UGC website during the last five years (10) Title of paper."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "3.3.3"
             type: "QnM"
             verify_type: true
-            text: "Number of books and chapters in edited volumes/books published and papers published in national/ international conference proceedings per teacher during last five years (10) Sl. No. Name of the Title of the Title of Title of the Name of the National / Year of ISBN/ISSN Affiliating Name of the teacher book/chapters the paper proceedings conference International publication number of Institute at publisher published of"
+            text: "Number of books and chapters in edited volumes/books published and papers published in national/ international conference proceedings per teacher during last five years (10)"
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "3.3.4"
             type: "QnM"
             verify_type: true
-            text: "Average percentage of students participating in extension activities at above during last five years (20) Name of the activity Organising unit/ agency/ Name of the scheme Year of the activity Number of students participated in such collaborating agency activities"
+            text: "Average percentage of students participating in extension activities at above during last five years (20)"
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "3.4"
         name: "Research Publications and Awards"
@@ -250,22 +246,17 @@ criteria:
           - id: "3.4.1"
             type: "QlM"
             verify_type: true
-            text: "The Institution has several collaborations/linkages for Faculty exchange, Student exchange, Internship, Field trip, On-the- job training, research etc during the last five years (10) Sl. No. Title of the Name of the collaborating Name of the Year of Duration Nature of the activity Link to the relevant collaborative agency with contact details participant collaboration document activity"
+            text: "The Institution has several collaborations/linkages for Faculty exchange, Student exchange, Internship, Field trip, On-the- job training, research etc during the last five years (10)"
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "3.4.2"
             type: "QnM"
             verify_type: true
-            text: "Number of awards and recognitions received for extension activities from government /government recognised bodies during the last five years (10) Name of the Name of the Award/ Name of the Awarding government/ government recognised bodies Year of award activity recognition"
+            text: "Number of awards and recognitions received for extension activities from government /government recognised bodies during the last five years (10)"
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "3.4.3"
             type: "QnM"
             verify_type: true
-            text: "Number of extension and outreached Programmes conducted by the institution through NSS/ NCC/ Red Cross/ YRC etc., ( including the programmes such as Swachh Bharat, AIDS awareness, Gender issues etc. and/or those organised in collaboration with industry, community and NGOs during the last five years (15) &"
-            evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
-          - id: "3.4.4"
-            type: "QnM"
-            verify_type: true
-            text: "Average percentage of students participating in extension activities at above during last five years (20) Name of the activity Organising unit/ agency/ Name of the scheme Year of the activity Number of students participated in such activities collaborating agency"
+            text: "Number of extension and outreached Programmes conducted by the institution through NSS/ NCC/ Red Cross/ YRC etc., ( including the programmes such as Swachh Bharat, AIDS awareness, Gender issues etc. and/or those organised in collaboration with industry, community and NGOs during the last five years (15) &."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "3.5"
         name: "Consultancy"
@@ -273,14 +264,14 @@ criteria:
           - id: "3.5.1"
             type: "QnM"
             verify_type: true
-            text: "Number of Collaborative activities for research, Faculty exchange, Student exchange/ internship per year 10 Q n M"
+            text: "Number of Collaborative activities for research, Faculty exchange, Student exchange/ internship per year."
             data_requirements:
               - "3.5.1.1: Number of Collaborative activities for research, Faculty"
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "3.5.2"
             type: "QnM"
             verify_type: true
-            text: "Number of functional MoUs with institutions, other universities, industries, corporate houses etc. during the last five years (10) Organisation with Name of the Year of signing Duration List the actual activities Number of students/teachers participated which MoU is signed institution/ industry/ MoU under each MOU year wise under MoUs corporate house"
+            text: "Number of functional MoUs with institutions, other universities, industries, corporate houses etc. during the last five years (10) Organisation with."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
   - id: "4"
     name: "Infrastructure and Learning Resources"
@@ -291,12 +282,12 @@ criteria:
           - id: "4.1.1"
             type: "QlM"
             verify_type: true
-            text: "The Institution has adequate infrastructure and physical facilities for teaching- learning. viz., classrooms, laboratories, computing 5 Q l M equipment etc. Describe the adequacy of infrastructure and physical facilities for teaching –learning as per the minimum specified requirement by statutory bodies within a maximum 500 words File Description:  Upload any additional information  Paste link for additional inform"
+            text: "The Institution has adequate infrastructure and physical facilities for teaching- learning. viz., classrooms, laboratories, computing."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "4.1.2"
             type: "QlM"
             verify_type: true
-            text: "The Institution has adequate facilities for cultural activities, sports, games (indoor, outdoor), gymnasium, yoga etc. 5 QM l Describe the adequacy of facilities for cultural activities, sports, games and cultural activities which include specification about area/size, year of establishment and user rate within a maximum of 500 words File Description  Upload any additional information  Paste link for additional inf"
+            text: "The Institution has adequate facilities for cultural activities, sports, games (indoor, outdoor), gymnasium, yoga etc."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "4.1.3"
             type: "QnM"
@@ -314,12 +305,12 @@ criteria:
           - id: "4.2.1"
             type: "QlM"
             verify_type: true
-            text: "Library is automated using Integrated Library Management System (ILMS) QM l Data Requirement for last five years: Upload a description of library with,  Name of ILMS software  Nature of automation (fully or partially)  Version  Year of Automation File Description:  Upload any additional information  Paste link for Additional Information"
+            text: "Library is automated using Integrated Library Management System (ILMS)"
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "4.2.2"
             type: "QlM"
             verify_type: true
-            text: "The institution has subscription for the following e-resources (6) 1. e-journals, 2. e-ShodhSindhu, 3. Shodhganga membership, 4. e-books, 5. Databases, 6. Remote access to e- resources"
+            text: "The institution has subscription for the following e-resources (6) 1. e-journals, 2. e-ShodhSindhu, 3. Shodhganga membership, 4. e-books, 5. Databases, 6. Remote access to e- resources."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "4.2.3"
             type: "QnM"
@@ -329,7 +320,7 @@ criteria:
           - id: "4.2.4"
             type: "QnM"
             verify_type: true
-            text: "Percentage per day usage of library by teachers and students ( foot falls and login data for online access) Q M (Data for the latest completed academic year) n"
+            text: "Percentage per day usage of library by teachers and students ( foot falls and login data for online access)"
             data_requirements:
               - "4.2.4.1: Number of teachers and students using library per day over last"
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
@@ -339,17 +330,17 @@ criteria:
           - id: "4.3.1"
             type: "QlM"
             verify_type: true
-            text: "Institution frequently updates its IT facilities including Wi-Fi QM Describe IT facilities including Wi-Fi with date and nature of updation l within a maximum of 500 words File Description  Upload any additional information  Paste link for additional information"
+            text: "Institution frequently updates its IT facilities including Wi-Fi."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "4.3.2"
             type: "QnM"
             verify_type: true
-            text: "Student – Computer ratio (Data for the latest completed academic year) Q M n Number of students : Number of Computers Data Requirements:  Number of computers in working condition  Total Number of students File Description  Upload any additional information  Student – computer ratio"
+            text: "Student – Computer ratio (Data for the latest completed academic year)"
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "4.3.3"
             type: "QlM"
             verify_type: true
-            text: "Bandwidth of internet connection in the Institution Options: Q M A. ≥50 MBPS n B. 30 MBPS – 50 MBPS C. 10 MBPS – 30 MBPS D. 10 MBPS – 05 MBPS E. < 05 MBPS Data Requirement:  Available internet bandwidth File Description  Upload any additional Information  Details of available bandwidth of internet connection in the Institution"
+            text: "Bandwidth of internet connection in the Institution Options:."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "4.4"
         name: "Maintenance of Campus Infrastructure"
@@ -362,7 +353,7 @@ criteria:
           - id: "4.4.2"
             type: "QlM"
             verify_type: true
-            text: "There are established systems and procedures for maintaining and utilizing physical, academic and support facilities - laboratory, library, 10 QM sports complex, computers, classrooms etc. l Describe policy details of systems and procedures for maintaining and utilizing physical, academic and support facilities on the website within a maximum of 1000 words File Description:  Upload any additional information  Paste"
+            text: "There are established systems and procedures for maintaining and utilizing physical, academic and support facilities - laboratory, library."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
   - id: "5"
     name: "Student Support and Progression"
@@ -378,22 +369,22 @@ criteria:
           - id: "5.1.2"
             type: "QnM"
             verify_type: true
-            text: "Average percentage of students benefited by scholarships, freeships, etc. provided by the institution besides government schemes during the last five years (05) Year Name of the scheme Number of students benefited by government Number of students benefited by the Link to relevant document scheme and amount institution's schemes and amount Number of students Amount Number of students Amount"
+            text: "Average percentage of students benefited by scholarships, freeships, etc. provided by the institution besides government schemes during the last five years (05) Year."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "5.1.3"
             type: "QlM"
             verify_type: true
-            text: "Capacity building and skills enhancement initiatives taken by the institution include the following (10) 1. Soft skills, 2. Language and communication skills, 3. Life skills (Yoga, physical fitness, health and hygiene), 4. ICT/computing skills Name of the capability Date of implementation (DD-MM-YYYY) Number of students enrolled Name of the agencies/consultants involved with enhancement program contact details (if an"
+            text: "Capacity building and skills enhancement initiatives taken by the institution include the following (10) 1. Soft skills, 2. Language and communication skills, 3. Life skills (Yoga, physical fitness, health and hygiene), 4. ICT/computing skills."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "5.1.4"
             type: "QnM"
             verify_type: true
-            text: "Average percentage of students benefitted by guidance for competitive examinations and career counseling offered by the institution during the last five years (10) Year Name of the Activity conducted by the HEI to offer Name of the Activity conducted by the HEI to offer Number of students Link to the guidance for competitive examinations offered by the guidance for career counseling offered by the institution placed "
+            text: "Average percentage of students benefitted by guidance for competitive examinations and career counseling offered by the institution during the last five years (10) Year."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "5.1.5"
             type: "QlM"
             verify_type: true
-            text: "The Institution has a transparent mechanism for timely redressal of student grievances including sexual harassment and ragging cases Q M n 1. Implementation of guidelines of statutory/regulatory bodies 2. Organisation wide awareness and undertakings on policies with zero tolerance 3. Mechanisms for submission of online/offline students‟ grievances 4. Timely redressal of the grievances through appropriate committees O"
+            text: "The Institution has a transparent mechanism for timely redressal of student grievances including sexual harassment and ragging cases."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "5.2"
         name: "Student Progression"
@@ -401,12 +392,12 @@ criteria:
           - id: "5.2.1"
             type: "QnM"
             verify_type: true
-            text: "Average percentage of placement of outgoing students during the last five years (10) Year Name of student placed and contact details Program graduated from Name of the employer with contact details Pay package at appointment"
+            text: "Average percentage of placement of outgoing students during the last five years (10) Year Name of student placed and contact details Program graduated from."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "5.2.2"
             type: "QnM"
             verify_type: true
-            text: "Average percentage of students progressing to higher education during the last five years (10) Name of student enrolling into Program graduated from Name of institution joined Name of programme admitted to higher education"
+            text: "Average percentage of students progressing to higher education during the last five years (10) Name of student enrolling into Program graduated from Name of institution joined Name of programme admitted to higher education."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "5.2.3"
             type: "QnM"
@@ -419,17 +410,17 @@ criteria:
           - id: "5.3.1"
             type: "QnM"
             verify_type: true
-            text: "Number of awards/medals for outstanding performance in sports/cultural activities at university/state/national / international level (award for a team event should be counted as one) during the last five years.(20) Year Name of the award/ medal Team / Individual University/State/National/ International Sports/ Cultural Name of the student"
+            text: "Number of awards/medals for outstanding performance in sports/cultural activities at university/state/national / international level (award for a team event should be counted as one) during the last five years.(20) Year."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "5.3.2"
             type: "QlM"
             verify_type: true
-            text: "Institution facilitates students’ representation and engagement in various administrative, co-curricular and extracurricular activities QM following duly established processes and norms (student council, l students representation on various bodies) Describe the students‟ representation and engagement in various administrative, co-curricular and extracurricular activities within a maximum of 500 words File Description"
+            text: "Institution facilitates students’ representation and engagement in various administrative, co-curricular and extracurricular activities."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "5.3.3"
             type: "QnM"
             verify_type: true
-            text: "Average number of sports and cultural activities/events in which students of the Institution participated during last five years (organised by the institution/other institutions) (20) Date of event/activity (DD-MM-YYYY) Name of the event/activity Name of the student participated Note: Classify the data and provide year wise"
+            text: "Average number of sports and cultural activities/events in which students of the Institution participated during last five years (organised by the institution/other institutions) (20) Date of event/activity (DD-MM-YYYY)"
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "5.4"
         name: "Alumni Engagement"
@@ -437,12 +428,12 @@ criteria:
           - id: "5.4.1"
             type: "QlM"
             verify_type: true
-            text: "There is a registered Alumni Association that contributes significantly to the development of the institution through financial and/or other support services QM l Describe contribution of alumni association to the institution within a maximum of 500 words File Description:  Paste link for additional information  Upload any additional information"
+            text: "There is a registered Alumni Association that contributes significantly to the development of the institution through financial and/or other support services."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "5.4.2"
             type: "QlM"
             verify_type: true
-            text: "Alumni contribution during the last five years (INR in Lakhs) Options: Q M A. ≥ 5 Lakhs n B. 4 Lakhs - 5 Lakhs C. 3 Lakhs - 4 Lakhs Opt one D. 1 Lakhs - 3 Lakhs E. <1 Lakhs Data Requirement for last five years (year wise):  Alumni association / Name of the alumnus  Quantum of contribution  Audited Statement of account of the institution reflecting the receipts. File Description  Upload any additional information"
+            text: "Alumni contribution during the last five years (INR in Lakhs) Options:."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
   - id: "6"
     name: "Governance, Leadership and Management"
@@ -453,12 +444,12 @@ criteria:
           - id: "6.1.1"
             type: "QlM"
             verify_type: true
-            text: "The governance of the institution is reflective of and in tune with the vision and mission of the institution 5 Describe the vision and mission statement of the institution on the QM l nature of governance, perspective plans and participation of the teachers in the decision making bodies of the institution within a maximum of 500 words File Description  Paste link for additional information  Upload any additional i"
+            text: "The governance of the institution is reflective of and in tune with the vision and mission of the institution 5 Describe the vision and mission statement of the institution on the."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "6.1.2"
             type: "QlM"
             verify_type: true
-            text: "The effective leadership is visible in various institutional practices such as decentralization and participative management QM Describe a case study showing decentralization and participative l management in the institution in practice within a maximum of 500 words File Description  Paste link for additional information  Upload any additional information"
+            text: "The effective leadership is visible in various institutional practices such as decentralization and participative management."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "6.2"
         name: "Strategy Development and Deployment"
@@ -466,17 +457,17 @@ criteria:
           - id: "6.2.1"
             type: "QlM"
             verify_type: true
-            text: "The institutional Strategic/ perspective plan is effectively deployed Describe one activity successfully implemented based on the strategic plan within a maximum of 500 words QM l File Description  Strategic Plan and deployment documents on the website  Paste link for additional information  Upload any additional information"
+            text: "The institutional Strategic/ perspective plan is effectively deployed Describe one activity successfully implemented based on the strategic plan."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "6.2.2"
             type: "QlM"
             verify_type: true
-            text: "The functioning of the institutional bodies is effective and efficient as visible from policies, administrative setup, appointment and service rules, procedures, etc. QM Describe the Organogram of the Institution within a maximum 500 l words File Description  Paste link for additional information  Link to Organogram of the Institution webpage  Upload any additional information"
+            text: "The functioning of the institutional bodies is effective and efficient as visible from policies, administrative setup, appointment and service rules, procedures, etc."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "6.2.3"
             type: "QlM"
             verify_type: true
-            text: "Implementation of e-governance in areas of operation (4) 1. Administration, 2. Finance and Accounts, 3. Student Admission and Support, 4. Examination Areas of e governance Name of the Vendor with contact details Year of implementation Administration Finance and Accounts Student Admission and Support Examination"
+            text: "Implementation of e-governance in areas of operation (4) 1. Administration, 2. Finance and Accounts, 3. Student Admission and Support, 4. Examination Areas of e governance."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "6.3"
         name: "Faculty Empowerment Strategies"
@@ -484,12 +475,12 @@ criteria:
           - id: "6.3.1"
             type: "QlM"
             verify_type: true
-            text: "The institution has effective welfare measures for teaching and non- teaching staff Provide the list of existing welfare measures for teaching and non- QM l teaching staff within a maximum of 500 words File Description  Paste link for additional information  Upload any additional information"
+            text: "The institution has effective welfare measures for teaching and non- teaching staff Provide the list of existing welfare measures for teaching and non."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "6.3.2"
             type: "QnM"
             verify_type: true
-            text: "Average percentage of teachers provided with financial support to attend conferences/workshop and towards membership fee of professional bodies during the last five years (10) Year Name of teacher Name of conference/ workshop attended Name of the professional body for which Amount of support for which financial support provided membership fee is provided"
+            text: "Average percentage of teachers provided with financial support to attend conferences/workshop and towards membership fee of professional bodies during the last five years (10) Year Name of teacher Name of conference/ workshop attended."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "6.3.3"
             type: "QnM"
@@ -499,12 +490,12 @@ criteria:
           - id: "6.3.4"
             type: "QnM"
             verify_type: true
-            text: "Average percentage of teachers undergoing online/ face-to-face Faculty Development Programmes (FDP) during the last five years (Professional Development Programmes, Orientation / Induction Programmes, Refresher Course, Short Term Course etc.) (5) Name of teacher who attended Title of the program Duration (from – to) (DD-MM-YYYY) Note: Classify the data and provide year wise"
+            text: "Average percentage of teachers undergoing online/ face-to-face Faculty Development Programmes (FDP) during the last five years (Professional Development Programmes, Orientation / Induction Programmes, Refresher Course, Short Term Course etc.) (5) Name of teacher who attended Title of the program Duration (from – to) (DD-MM-YYYY) Note: Classify the data and provide year wise."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "6.3.5"
             type: "QlM"
             verify_type: true
-            text: "Institutions Performance Appraisal System for teaching and non- teaching staff QM l Describe the functioning status of the Performance Appraisal System for teaching and non-teaching staff within a maximum of 500 words File Description  Paste link for additional information  Upload any additional information"
+            text: "Institutions Performance Appraisal System for teaching and non- teaching staff."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "6.4"
         name: "Financial Management and Resource Mobilization"
@@ -512,17 +503,17 @@ criteria:
           - id: "6.4.1"
             type: "QlM"
             verify_type: true
-            text: "Institution conducts internal and external financial audits regularly Enumerate the various internal and external financial audits carried out during the last five years with the mechanism for settling audit QM l objections within a maximum of 500 words File Description  Paste link for additional information  Upload any additional information"
+            text: "Institution conducts internal and external financial audits regularly Enumerate the various internal and external financial audits carried out during the last five years with the mechanism for settling audit."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "6.4.2"
             type: "QlM"
             verify_type: true
-            text: "Funds / Grants received from non-government bodies, individuals, philanthropers during the last five years (not covered in Criterion III) (8) Year Name of the non government funding Purpose of the Grant Funds/ Grants received (INR in lakhs) Link to Audited Statement of Accounts agencies/ individuals reflecting the receipts"
+            text: "Funds / Grants received from non-government bodies, individuals, philanthropers during the last five years (not covered in Criterion III) (8) Year."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "6.4.3"
             type: "QlM"
             verify_type: true
-            text: "Institutional strategies for mobilisation of funds and the optimal utilisation of resources QM l Describe the resource mobilisation policy and procedures of the Institution within a maximum of 500 words File Description  Paste link for additional information  Upload any additional information"
+            text: "Institutional strategies for mobilisation of funds and the optimal utilisation of resources."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "6.5"
         name: "Internal Quality Assurance System (IQAS)"
@@ -530,12 +521,12 @@ criteria:
           - id: "6.5.1"
             type: "QlM"
             verify_type: true
-            text: "Internal Quality Assurance Cell (IQAC) has contributed significantly for institutionalizing the quality assurance strategies and processes QM l Describe two practices institutionalized as a result of IQAC initiatives within a maximum of 500 words File Description  Paste link for additional information  Upload any additional information"
+            text: "Internal Quality Assurance Cell (IQAC) has contributed significantly for institutionalizing the quality assurance strategies and processes."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "6.5.2"
             type: "QlM"
             verify_type: true
-            text: "The institution reviews its teaching learning process, structures & methodologies of operations and learning outcomes at periodic intervals through IQAC set up as per norms and recorded the QM incremental improvement in various activities l ( For first cycle - Incremental improvements made for the preceding five years with regard to quality For second and subsequent cycles - Incremental improvements made for the prec"
+            text: "The institution reviews its teaching learning process, structures & methodologies of operations and learning outcomes at periodic intervals through IQAC set up as per norms and recorded the."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "6.5.3"
             type: "QlM"
@@ -551,22 +542,22 @@ criteria:
           - id: "7.1.1"
             type: "QlM"
             verify_type: true
-            text: "Measures initiated by the Institution for the promotion of gender equity during the last five years. QlM Describe gender equity & sensitization in curricular and co-curricular activities, facilities for women on campus etc., within 500 words Provide Web link to:  Annual gender sensitization action plan  Specific facilities provided for women in terms of: a) Safety and security b) Counselling c) Common Rooms d) Day "
+            text: "Measures initiated by the Institution for the promotion of gender equity during the last five years."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "7.1.2"
             type: "QlM"
             verify_type: true
-            text: "The Institution has facilities for alternate sources of energy and energy Q M conservation measures n 1. Solar energy 2. Biogas plant 3. Wheeling to the Grid 4. Sensor-based energy conservation 5. Use of LED bulbs/ power efficient equipment Options: A. 4 or All of the above B. Any 3 of the above C. Any 2 of the above D. Any 1 of the above E. None of the above Upload:  Geotagged Photographs  Any other relevant infor"
+            text: "The Institution has facilities for alternate sources of energy and energy."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "7.1.3"
             type: "QlM"
             verify_type: true
-            text: "Describe the facilities in the Institution for the management of the following QM types of degradable and non-degradable waste (within 500 words) l  Solid waste management  Liquid waste management  Biomedical waste management  E-waste management  Waste recycling system  Hazardous chemicals and radioactive waste management Provide web link to  Relevant documents like agreements/MoUs with Government and other ap"
+            text: "Describe the facilities in the Institution for the management of the following."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "7.1.4"
             type: "QlM"
             verify_type: true
-            text: "Water conservation facilities available in the Institution: 1. Rain water harvesting Q M n 2. Borewell /Open well recharge 3. Construction of tanks and bunds 4. Waste water recycling 5. Maintenance of water bodies and distribution system in the campus Options: A. Any 4 or all of the above B. Any 3 of the above C. Any 2 of the above D. Any 1 of the above E. None of the above Upload :  Geotagged photographs / videos o"
+            text: "Water conservation facilities available in the Institution: 1. Rain water harvesting."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "7.1.5"
             type: "QlM"
@@ -578,32 +569,32 @@ criteria:
           - id: "7.1.6"
             type: "QlM"
             verify_type: true
-            text: "Quality audits on environment and energy are regularly undertaken by the institution QnM 7.1.6.1. The institutional environment and energy initiatives are confirmed through the following 1.Green audit 2. Energy audit 3.Environment audit 4.Clean and green campus recognitions/awards 5. Beyond the campus environmental promotional activities Options: A. Any 4 or all of the above B. Any 3 of the above C. Any 2 of the abov"
+            text: "Quality audits on environment and energy are regularly undertaken by the institution."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "7.1.7"
             type: "QlM"
             verify_type: true
-            text: "The Institution has disabled-friendly, barrier free environment 1. Built environment with ramps/lifts for easy access to classrooms. Q M 2. Disabled-friendly washrooms n 3. Signage including tactile path, lights, display boards and signposts 4. Assistive technology and facilities for persons with disabilities ( Divyangjan) accessible website, screen-reading software, mechanized equipment 5. Provision for enquiry and "
+            text: "The Institution has disabled-friendly, barrier free environment 1. Built environment with ramps/lifts for easy access to classrooms."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "7.1.8"
             type: "QlM"
             verify_type: true
-            text: "Describe the Institutional efforts/initiatives in providing an inclusive environment i.e., tolerance and harmony towards cultural, regional, QM linguistic, communal socioeconomic and other diversities (within 500 words). l Provide Web link to:  Supporting documents on the information provided (as reflected in the administrative and academic activities of the Institution)  Any other relevant information. Human Value"
+            text: "Describe the Institutional efforts/initiatives in providing an inclusive environment i.e., tolerance and harmony towards cultural, regional."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "7.1.9"
             type: "QlM"
             verify_type: true
-            text: "Sensitization of students and employees of the Institution to the constitutional obligations: values, rights, duties and responsibilities of citizens QM l Describe the various activities in the Institution for inculcating values for being responsible citizens as reflected in the Constitution of India within 500 words. Provide weblink to :  Details of activities that inculcate values; necessary to render students in "
+            text: "Sensitization of students and employees of the Institution to the constitutional obligations: values, rights, duties and responsibilities of citizens."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "7.1.10"
             type: "QlM"
             verify_type: true
-            text: "The Institution has a prescribed code of conduct for students, teachers, Q M administrators and other staff and conducts periodic programmes in this n regard. 1. The Code of Conduct is displayed on the website 2. There is a committee to monitor adherence to the Code of Conduct 3. Institution organizes professional ethics programmes for students, teachers, administrators and other staff 4. Annual awareness programmes "
+            text: "The Institution has a prescribed code of conduct for students, teachers."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "7.1.11"
             type: "QlM"
             verify_type: true
-            text: "Institution celebrates / organizes national and international commemorative QM days, events and festivals l Describe the efforts of the Institution in celebrating /organizing national and international commemorative days, events and festivals during the last five years within 500 words Provide weblink to :  Annual report of the celebrations and commemorative events for the last five years  Geotagged photographs of "
+            text: "Institution celebrates / organizes national and international commemorative."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "7.2"
         name: "Best Practices"
@@ -611,7 +602,7 @@ criteria:
           - id: "7.2.1"
             type: "QlM"
             verify_type: true
-            text: "Describe two best practices successfully implemented by the Institution as QM per NAAC format provided in the Manual. l Provide web link to:  Best practices in the Institutional web site  Any other relevant information Note: Format for Presentation of Best Practices 1. Title of the Practice This title should capture the keywords that describe the practice. 2. Objectives of the Practice What are the objectives / int"
+            text: "Describe two best practices successfully implemented by the Institution as."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
       - id: "7.3"
         name: "Institutional Distinctiveness"
@@ -619,5 +610,5 @@ criteria:
           - id: "7.3.1"
             type: "QlM"
             verify_type: true
-            text: "Portray the performance of the Institution in one area distinctive to its priority and thrust within 1000 words QM l Provide web link to:  Appropriate web in the Institutional website  Any other relevant information 5. Data Templates / Documents (Quantitative Metrics) The online formats (Templates) for submitting data with respect to Quantitative Metrics (Q M) are given in consecutive pages. n Kindly Note: For each"
+            text: "Portray the performance of the Institution in one area distinctive to its priority and thrust."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
