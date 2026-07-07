@@ -1,5 +1,5 @@
 """
-Praman -- file organizer.
+Saandru -- file organizer.
 
 Takes the classification decisions the pipeline already made (and the human already
 reviewed, at L1/L2) and COPIES each source document into a tidy set of subfolders,
@@ -42,22 +42,22 @@ README_TEXT = """Praman_Sorted -- what is this folder?
 
 Everything in here is a COPY. Your original documents were NOT moved, renamed,
 or changed in any way -- they are still exactly where they were before you ran
-Praman.
+Saandru.
 
 Folder layout:
-  - "Criterion_<id>_<name>"  -> documents Praman matched to that accreditation
+  - "Criterion_<id>_<name>"  -> documents Saandru matched to that accreditation
                                  criterion (either automatically, or after you
                                  accepted / corrected the suggestion on screen).
       - "AY_<year>"          -> inside each criterion folder, documents are further
-                                 sorted by the academic year Praman detected in them
+                                 sorted by the academic year Saandru detected in them
                                  (e.g. "AY_2023-24").
       - "_YEAR_UNKNOWN"      -> documents where no academic year could be detected.
   - "_NEEDS_REVIEW"          -> documents that still need a human decision.
-  - "_COULD_NOT_READ"        -> files Praman could not open or understand
+  - "_COULD_NOT_READ"        -> files Saandru could not open or understand
                                  (unsupported format, corrupt file, etc).
 
 If you delete this whole "Praman_Sorted" folder, nothing is lost -- your
-original documents are untouched. You can re-run Praman at any time to
+original documents are untouched. You can re-run Saandru at any time to
 regenerate it.
 """
 
@@ -83,7 +83,7 @@ def _resolve_collision(dest_dir, filename, src_hash):
     """Return (dest_path, should_copy) for a destination inside dest_dir.
 
     Never overwrites an existing file. But a name collision no longer always means
-    "different file, suffix it" -- faculty re-running Praman on a folder they already
+    "different file, suffix it" -- faculty re-running Saandru on a folder they already
     sorted used to pile up "_2", "_3" copies of the SAME document every time. So:
       - if a file already sits at the candidate path with IDENTICAL bytes (sha256
         match) -> this is the same document already sorted; skip the copy and return

@@ -46,5 +46,5 @@ for crit in sorted(by_crit):
                          "true_metric": "?", "ssr_ref": mid})
 json.dump(manifest, open(os.path.join(OUT, "_ground_truth.json"), "w", encoding="utf-8"), indent=2)
 avg = sum(len(open(os.path.join(OUT, d["file"]), encoding="utf-8").read()) for d in manifest)//max(len(manifest),1)
-print(f"wrote {n} REAL evidence chunks from AKGEC SSR to {OUT}")
+print(f"wrote {n} REAL evidence chunks from a real college SSR to {OUT}")
 print(f"  criteria covered: {sorted(by_crit)}  | avg length: {avg} chars (vs mock ~250)")

@@ -1,4 +1,4 @@
-"""Praman -- tamper-evident check for a Praman_Sorted folder.
+"""Saandru -- tamper-evident check for a Praman_Sorted folder.
 
 organize.py writes "_manifest.json" while it copies (sha256 of every copied file, plus
 where it came from). Faculty sometimes edit/move/delete files inside Praman_Sorted by
@@ -13,7 +13,7 @@ Pure code, zero AI. Four kinds of discrepancy:
               (deleted, or edited beyond recognition -- either way, gone).
   - EXTRA   : a file sitting on disk that the manifest never recorded (dropped in by
               hand). "_manifest.json" and "README.txt" are never flagged as extra --
-              they are Praman's own bookkeeping, not evidence.
+              they are Saandru's own bookkeeping, not evidence.
 
 Runnable standalone: `python src/verify_sorted.py <path-to-Praman_Sorted>`
 """
@@ -35,7 +35,7 @@ _IGNORED_NAMES = {MANIFEST_FILENAME, "README.txt"}
 
 def _walk_current_files(sorted_dir):
     """Return {relpath (forward slashes): sha256} for every real file under sorted_dir,
-    skipping the manifest itself and README.txt (Praman's own bookkeeping, not evidence)."""
+    skipping the manifest itself and README.txt (Saandru's own bookkeeping, not evidence)."""
     current = {}
     for root, _dirnames, filenames in os.walk(sorted_dir):
         for name in filenames:

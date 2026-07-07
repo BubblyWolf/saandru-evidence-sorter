@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Build ground-truth manifest for JJCET DVV per-metric evidence PDFs.
+"""Build ground-truth manifest for a real Tamil Nadu engineering college's DVV
+per-metric evidence PDFs (folder name kept as "jjcet_dvv" -- see benchmarks/baseline.json).
 Filename = metric id = the answer key (real, current-format, TN engineering college)."""
 import os, json, sys
 sys.path.insert(0, r"D:\praman\src")

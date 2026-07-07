@@ -1,7 +1,7 @@
 """Recursive file discovery for a source folder.
 
 Real college folders are messy: nested subfolders (Criterion 3/MoUs/...), stray
-OS junk files (Thumbs.db, desktop.ini, ~$temp lock files), and Praman's own
+OS junk files (Thumbs.db, desktop.ini, ~$temp lock files), and Saandru's own
 output folder sitting inside the source folder from a previous run. This module
 is the SINGLE place that decides "is this a real candidate document" so run.py,
 app.py, and any future entry point all see the same messy-real-world folder the
@@ -22,7 +22,7 @@ _JUNK_NAMES = {"thumbs.db", "desktop.ini", "_ground_truth.json", "_expected.json
 # Junk filename suffixes to always skip.
 _JUNK_SUFFIXES = (".tmp", ".lnk", ".ini", ".db")
 
-# Praman's own output folder -- if the tool is re-run on a folder it already
+# Saandru's own output folder -- if the tool is re-run on a folder it already
 # organized, its own copies must never be re-ingested as "new" source documents.
 _OWN_OUTPUT_DIRNAME = "Praman_Sorted"
 
@@ -45,7 +45,7 @@ def discover_files(folder):
     so os.path.join(folder, relpath) always resolves correctly downstream.
 
     Skips: dotfiles/lock files (~$...), known OS junk (Thumbs.db, desktop.ini),
-    Praman's own ground-truth/expected fixtures, .tmp/.lnk/.ini/.db files, and
+    Saandru's own ground-truth/expected fixtures, .tmp/.lnk/.ini/.db files, and
     anything nested inside a "Praman_Sorted" folder (the tool's own output from
     a prior run). Never filters by extension -- that decision belongs to ingest.py
     so unsupported types still get a clear marker instead of vanishing silently.

@@ -323,20 +323,26 @@ def test_chat_model_tiering():
     HIGH, LOW = ollama_client._HIGH_RAM_MODEL, ollama_client._LOW_RAM_MODEL
 
     real_env = os.environ.pop("PRAMAN_MODEL", None)
+    real_env_new = os.environ.pop("SAANDRU_MODEL", None)
     try:
         # high-RAM machine, both models installed -> default 3b, unchanged.
         model, reason = ollama_client._choose_chat_model(ram_gb=16, installed=[HIGH, LOW])
         check("high-RAM -> default 3b model", model == HIGH, model)
         check("high-RAM reason mentions RAM", "RAM" in reason, reason)
 
-        # low-RAM machine, both installed -> prefers the 1.5b tier.
+        # 8GB machine, both installed -> STILL the 3b tier: 3b at q4 only needs ~2.3GB,
+        # so an 8GB no-GPU office PC keeps the accurate model (slower but usable).
         model, reason = ollama_client._choose_chat_model(ram_gb=8, installed=[HIGH, LOW])
-        check("low-RAM -> prefers 1.5b model", model == LOW, model)
+        check("8GB machine -> keeps 3b model (cutoff is >=8GB)", model == HIGH, model)
+
+        # genuinely weak machine (below 8GB), both installed -> prefers the 1.5b tier.
+        model, reason = ollama_client._choose_chat_model(ram_gb=6, installed=[HIGH, LOW])
+        check("6GB machine -> prefers 1.5b model", model == LOW, model)
         check("low-RAM reason mentions low-RAM tier", "low-RAM" in reason, reason)
 
         # low-RAM machine, but 1.5b was never pulled -> falls back to the installed 3b
         # rather than requesting a model Ollama doesn't have.
-        model, reason = ollama_client._choose_chat_model(ram_gb=8, installed=[HIGH])
+        model, reason = ollama_client._choose_chat_model(ram_gb=6, installed=[HIGH])
         check("low-RAM + 1.5b not installed -> falls back to installed 3b", model == HIGH, model)
         check("fallback reason says so", "fallback" in reason and HIGH in reason, reason)
 
@@ -355,10 +361,19 @@ def test_chat_model_tiering():
         model, reason = ollama_client._choose_chat_model(ram_gb=4, installed=[])
         check("env override wins over RAM tier", model == "custom-model:latest", model)
         check("env override reason says so", reason == "env override", reason)
+
+        # SAANDRU_MODEL is the preferred alias -- it beats the older PRAMAN_MODEL name.
+        os.environ["SAANDRU_MODEL"] = "newer-model:latest"
+        model, reason = ollama_client._choose_chat_model(ram_gb=4, installed=[])
+        check("SAANDRU_MODEL alias beats PRAMAN_MODEL", model == "newer-model:latest", model)
+        os.environ.pop("SAANDRU_MODEL", None)
     finally:
         os.environ.pop("PRAMAN_MODEL", None)
+        os.environ.pop("SAANDRU_MODEL", None)
         if real_env is not None:
             os.environ["PRAMAN_MODEL"] = real_env
+        if real_env_new is not None:
+            os.environ["SAANDRU_MODEL"] = real_env_new
 
     # live check: on THIS machine (16GB RAM, qwen2.5:3b-instruct installed), the module-level
     # CHAT_MODEL computed at import time must land on the unchanged default -- the doc cache

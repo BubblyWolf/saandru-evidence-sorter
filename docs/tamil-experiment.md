@@ -1,7 +1,7 @@
-# Tamil documents — what Praman actually does today (measured, not promised)
+# Tamil documents — what Saandru actually does today (measured, not promised)
 
 Real Tamil Nadu colleges keep some evidence in Tamil (scholarship lists, notices,
-circulars). This is a measurement of Praman's CURRENT behaviour on Tamil text, run
+circulars). This is a measurement of Saandru's CURRENT behaviour on Tamil text, run
 on 07 July 2026 against the `naac_autonomous_raf.yaml` pack, using the installed
 `nomic-embed-text` embedding model. No code was changed for this experiment.
 
@@ -28,7 +28,7 @@ factor here -- this isolates the embedding/classification step) were classified
 against the autonomous pack (106 metrics), `pack_name=None` so no corrections
 memory could help or hurt the result:
 
-| File | Real topic | Expected metric | Praman's result | Status | Confidence |
+| File | Real topic | Expected metric | Saandru's result | Status | Confidence |
 |---|---|---|---|---|---|
 | `1_scholarship.txt` (pure Tamil) | scholarship disbursement list | 5.1.1 | **3.5.1 (WRONG)** | auto (committed) | 0.97 |
 | `2_green_audit.txt` (pure Tamil) | green/energy/water audit | 7.1.x | **3.5.1 (WRONG)** | auto (committed) | 0.81 |
@@ -43,7 +43,7 @@ three pure-Tamil documents were classified with HIGH confidence (0.81-0.97) and
 committed automatically (`status=auto`) -- but to the WRONG metric, and all three
 landed near the same narrow cluster (3.5.x/3.7.x) regardless of their real
 content. `nomic-embed-text` clearly cannot tell Tamil documents apart from each
-other; it just returns *some* confident-looking nearest neighbour, and Praman's
+other; it just returns *some* confident-looking nearest neighbour, and Saandru's
 confidence gate does not know the embedding itself is meaningless here.
 
 The one case that worked correctly is the realistic one for most real folders:

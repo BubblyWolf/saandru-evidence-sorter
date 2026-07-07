@@ -1,5 +1,5 @@
 """
-Praman -- Accreditation Evidence Sorter
+Saandru -- Accreditation Evidence Sorter
 Single-file Streamlit UI for non-technical college office staff.
 
 Everything runs locally. Nothing is uploaded anywhere.
@@ -27,6 +27,7 @@ from enrich import extract_academic_year, suggest_name  # noqa: E402
 from gap_report import build_gap_report, format_gap_report_text, format_summary_card_text  # noqa: E402
 import corrections                     # noqa: E402  -- Feature A: learn from human corrections
 from duplicates import find_duplicates, file_sha256  # noqa: E402  -- Feature B: duplicate finder
+from report_pdf import write_gap_report_pdf, write_gap_report_html  # noqa: E402  -- Task 1: PDF/HTML reports
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CRITERIA_DIR = os.path.join(BASE_DIR, "criteria")
@@ -68,7 +69,7 @@ PACK_CHOICES = _discover_packs()
 # --------------------------------------------------------------------------
 # Page setup + light styling
 # --------------------------------------------------------------------------
-st.set_page_config(page_title="Praman — Accreditation Evidence Sorter", page_icon="📄", layout="wide")
+st.set_page_config(page_title="Saandru (சான்று) — Accreditation Evidence Sorter", page_icon="📄", layout="wide")
 
 st.markdown(
     """
@@ -85,11 +86,18 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("Praman — Accreditation Evidence Sorter")
+st.title("Saandru (சான்று) — Accreditation Evidence Sorter")
 st.markdown(
     '<div class="subtitle">Your documents stay on this computer. Nothing goes to the internet.</div>',
     unsafe_allow_html=True,
 )
+
+with st.expander("ℹ️ What does this tool do? (read this first)", expanded=False):
+    st.write("1. You point it at a folder of your college's documents (certificates, reports, notices — anything).")
+    st.write("2. It reads each file and guesses which accreditation point (NAAC or NBA) it is evidence for.")
+    st.write("3. It sorts the confident guesses into neat folders for you, and asks you to check the unsure ones.")
+    st.write("4. At the end you get a tidy folder, an Excel list of every file, and a report of what is still missing.")
+    st.markdown("**Your files never leave this computer. No internet is used.**")
 
 
 # --------------------------------------------------------------------------
@@ -126,10 +134,43 @@ def _log(file, suggestion, confidence, human_action):
     })
 
 
+def _friendly_error(user_message, exc):
+    """One line the office staff can actually understand, plus the raw Python
+    error tucked away in a collapsed expander for whoever helps them later.
+    Never shows a raw stack trace directly on screen."""
+    st.error(user_message)
+    with st.expander("Technical details (for the person helping you)"):
+        st.exception(exc)
+
+
+def _format_time_left(seconds_left):
+    """Turn a raw seconds estimate into a plain-English phrase for someone who
+    has never seen a progress bar with a time estimate before."""
+    if seconds_left is None or seconds_left <= 0:
+        return "almost done"
+    minutes_left = round(seconds_left / 60)
+    if minutes_left < 1:
+        return "less than a minute left"
+    if minutes_left == 1:
+        return "about 1 minute left"
+    return f"about {minutes_left} minutes left"
+
+
+def _progress_message(index_1based, total, elapsed_seconds):
+    """'Reading file 3 of 120 -- about 8 minutes left'. Estimate = files still
+    left times the rolling average seconds-per-file seen SO FAR this run --
+    no new session-state keys, just the loop counters already in hand."""
+    avg_seconds_per_file = elapsed_seconds / index_1based if index_1based else 0
+    files_left = total - index_1based
+    eta_seconds = avg_seconds_per_file * files_left
+    return f"Reading file {index_1based} of {total} -- {_format_time_left(eta_seconds)}"
+
+
 # --------------------------------------------------------------------------
 # STEP 1 -- folder + pack
 # --------------------------------------------------------------------------
-st.markdown('<div class="big-step-title">Step 1 📁 — Where are your documents?</div>', unsafe_allow_html=True)
+st.markdown('<div class="big-step-title">Step 1 📁 — Show me where your documents are</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Paste the folder path below. This is the folder that has your certificates, reports, notices, etc.</div>', unsafe_allow_html=True)
 folder_path = st.text_input(
     "Folder path",
     value=st.session_state.get("folder_path", ""),
@@ -138,8 +179,17 @@ folder_path = st.text_input(
 )
 st.session_state["folder_path"] = folder_path
 
+if folder_path and not os.path.isdir(folder_path):
+    st.warning(
+        "This folder was not found. Check for spelling mistakes, or copy the path "
+        "again from File Explorer (click the address bar, press Ctrl+C, then paste here with Ctrl+V)."
+    )
+
 if not PACK_CHOICES:
-    st.error(f"No criteria packs found in {CRITERIA_DIR}. Add a .yaml pack there first.")
+    st.error(
+        "No accreditation checklists were found on this computer. "
+        f"Please ask a technical person to add a .yaml file to the '{CRITERIA_DIR}' folder."
+    )
     st.stop()
 
 pack_choice_label = st.radio(
@@ -159,12 +209,17 @@ st.divider()
 # --------------------------------------------------------------------------
 # STEP 2 -- oversight level
 # --------------------------------------------------------------------------
-st.markdown('<div class="big-step-title">Step 2 🎚️ — How much should the assistant do alone?</div>', unsafe_allow_html=True)
+st.markdown('<div class="big-step-title">Step 2 🎚️ — How much should the assistant do on its own?</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Choose how much you want to check yourself, and how much the assistant can decide alone.</div>', unsafe_allow_html=True)
 
+# NOTE: only the VISIBLE label text changes here for non-technical staff.
+# The underlying keys "L1"/"L2"/"L3" and everything that reads oversight_level
+# elsewhere in this file (bucketing, organize(), the corrections memory) are
+# untouched -- do not rename these dict keys.
 LEVEL_OPTIONS = {
-    "L1": "I will check every file before it is filed",
-    "L2": "File the confident ones, show me only the unsure ones",
-    "L3": "File everything, just give me the summary and log",
+    "L1": "Safest — I check every file myself",
+    "L2": "Balanced — it files the sure ones, I check the rest (recommended)",
+    "L3": "Fastest — it files everything, I just get the report",
 }
 level_label_to_key = {v: k for k, v in LEVEL_OPTIONS.items()}
 
@@ -182,6 +237,7 @@ st.divider()
 # STEP 3 -- run
 # --------------------------------------------------------------------------
 st.markdown('<div class="big-step-title">Step 3 ▶️ — Start sorting</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">The assistant will read every file and suggest where it belongs. This can take a few minutes.</div>', unsafe_allow_html=True)
 st.caption(f"Reading model on this PC: {CHAT_MODEL} ({CHAT_MODEL_REASON})")
 
 start_col, _ = st.columns([1, 3])
@@ -190,7 +246,10 @@ with start_col:
 
 if start_clicked:
     if not folder_path or not os.path.isdir(folder_path):
-        st.error("That folder path does not exist. Please check it and try again.")
+        st.error(
+            "This folder was not found. Check for spelling mistakes, or copy the path "
+            "again from File Explorer."
+        )
     else:
         # discover_files() walks subfolders and never filters by extension --
         # every file (including unsupported/unreadable ones) shows up so it can
@@ -199,8 +258,10 @@ if start_clicked:
         files = discover_files(folder_path)
         if not files:
             st.warning(
-                "No files were found in that folder (this scans all common formats — "
-                "txt/docx/doc/pdf/csv/xlsx/pptx/images — including subfolders)."
+                "No files were found in that folder. Saandru looks for these formats: "
+                "txt, docx, doc, pdf, csv, xlsx, pptx, and photo/scan formats (jpg, png). "
+                "Please check that your documents are inside this folder (subfolders are fine — "
+                "Saandru looks inside them too)."
             )
         else:
             # reset state for a fresh run
@@ -211,8 +272,9 @@ if start_clicked:
 
             progress_bar = st.progress(0)
             status_text = st.empty()
+            run_start_time = time.time()
 
-            with st.spinner("Loading the criteria list..."):
+            with st.spinner("Loading the accreditation checklist..."):
                 metrics, pack_name = load_metrics(pack_path)
                 metric_vecs = embed_metrics(metrics, pack_name)
             st.session_state.metrics = metrics
@@ -220,9 +282,14 @@ if start_clicked:
 
             total = len(files)
             for i, fn in enumerate(files, start=1):
-                status_text.text(f"Reading file {i} of {total}: {fn}...")
+                status_text.text(_progress_message(i, total, time.time() - run_start_time))
                 full_path = os.path.join(folder_path, fn)
-                text = read_document(full_path)
+                try:
+                    text = read_document(full_path)
+                except Exception as e:
+                    # A single bad/locked file must never stop the whole batch --
+                    # treat it like any other unreadable file and keep going.
+                    text = f"[UNREADABLE: {e}]"
 
                 record = {
                     "file": fn,
@@ -243,24 +310,43 @@ if start_clicked:
                     # sha256 still works on an unreadable file (it's a hash of raw bytes, no
                     # parsing needed) -- two unreadable copies of the same bad file should still
                     # show up as an exact duplicate. No doc_vec though: nothing was classified.
-                    record["sha256"] = file_sha256(full_path)
+                    try:
+                        record["sha256"] = file_sha256(full_path)
+                    except Exception:
+                        record["sha256"] = None
                     record["doc_vec"] = None
                     st.session_state.results.append(record)
                     _log(fn, "-", 0.0, "could not read")
                     progress_bar.progress(i / total)
                     continue
 
-                result = classify(text, metrics, metric_vecs, pack_name=pack_name)
-                chosen = result["chosen"]
+                try:
+                    result = classify(text, metrics, metric_vecs, pack_name=pack_name)
+                    chosen = result["chosen"]
 
-                year_info = extract_academic_year(text)
-                # Task 1: reuse the title piggybacked onto the adjudication call instead of a
-                # second LLM call; fall back to suggest_name() only when it's empty.
-                suggested_name = result.get("title") or suggest_name(
-                    text,
-                    criterion_name=(chosen["criterion_name"] if chosen else ""),
-                    metric_id=(chosen["id"] if chosen else ""),
-                )
+                    year_info = extract_academic_year(text)
+                    # Task 1: reuse the title piggybacked onto the adjudication call instead of a
+                    # second LLM call; fall back to suggest_name() only when it's empty.
+                    suggested_name = result.get("title") or suggest_name(
+                        text,
+                        criterion_name=(chosen["criterion_name"] if chosen else ""),
+                        metric_id=(chosen["id"] if chosen else ""),
+                    )
+                except Exception as e:
+                    # Same rule as above: one document's classifier error must not stop
+                    # the whole batch -- park it in "Could not be opened" and move on.
+                    record["unreadable"] = True
+                    record["reason"] = f"The assistant could not read this file properly. Details: {e}"
+                    record["status"] = "unreadable"
+                    try:
+                        record["sha256"] = file_sha256(full_path)
+                    except Exception:
+                        record["sha256"] = None
+                    record["doc_vec"] = None
+                    st.session_state.results.append(record)
+                    _log(fn, "-", 0.0, "could not read")
+                    progress_bar.progress(i / total)
+                    continue
 
                 record.update({
                     "confidence": result["confidence"],
@@ -305,9 +391,9 @@ if start_clicked:
 
                 progress_bar.progress(i / total)
 
-            status_text.text(f"Done. Processed {total} file(s).")
+            status_text.text(f"Done. Looked at {total} file(s).")
             st.session_state.run_done = True
-            st.success(f"Finished sorting {total} document(s).")
+            st.success(f"Finished reading {total} document(s). Scroll down to see the results.")
 
 
 st.divider()
@@ -325,13 +411,13 @@ if st.session_state.run_done:
 
     tab_auto, tab_review, tab_bad = st.tabs([
         f"✅ Filed automatically ({len(auto_docs)})",
-        f"🟡 Please check these ({len(review_docs)})",
-        f"❌ Could not read ({len(unreadable_docs)})",
+        f"🟡 Waiting for your check ({len(review_docs)})",
+        f"🔴 Could not be opened ({len(unreadable_docs)})",
     ])
 
     # ---- Auto bucket ----
     with tab_auto:
-        st.markdown('<div class="bucket-green">These were filed automatically because the assistant was confident.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="bucket-green">These were filed automatically ✅ because the assistant was confident.</div>', unsafe_allow_html=True)
         if not auto_docs:
             st.info("No documents were filed automatically yet.")
         else:
@@ -353,7 +439,7 @@ if st.session_state.run_done:
 
     # ---- Review bucket: one-at-a-time card ----
     with tab_review:
-        st.markdown('<div class="bucket-amber">The assistant is not fully sure about these. Please check each one.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="bucket-amber">🟡 The assistant is not fully sure about these. Please check each one.</div>', unsafe_allow_html=True)
 
         pending = [r for r in review_docs if r.get("decided_by") != "human"]
         decided = [r for r in review_docs if r.get("decided_by") == "human"]
@@ -371,6 +457,7 @@ if st.session_state.run_done:
             c = r.get("chosen_metric")
 
             st.caption(f"Reviewing {idx + 1} of {len(pending)} unsure files")
+            st.caption("Not sure? Read the document preview below, then press Accept, or pick the right shelf from the list.")
 
             with st.container():
                 st.markdown('<div class="review-card">', unsafe_allow_html=True)
@@ -481,7 +568,7 @@ if st.session_state.run_done:
 
     # ---- Unreadable bucket ----
     with tab_bad:
-        st.markdown('<div class="bucket-red">These files could not be opened or understood.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="bucket-red">🔴 These files could not be opened or understood.</div>', unsafe_allow_html=True)
         if not unreadable_docs:
             st.info("Every file could be read. 🎉")
         else:
@@ -496,7 +583,7 @@ if st.session_state.run_done:
     # 🟡 tab is already reflected here -- that is the whole point of showing this
     # AFTER the review step instead of right after the run finishes.
     st.markdown('<div class="big-step-title">Coverage & Gaps 📊 — what evidence do we have?</div>', unsafe_allow_html=True)
-    st.caption("Counts your decisions above, including any corrections you just made.")
+    st.caption("Counts your decisions above (Filed automatically ✅ + anything you confirmed), including any corrections you just made.")
 
     gap_decisions = [
         {
@@ -559,6 +646,41 @@ if st.session_state.run_done:
         file_name="gap_report.txt",
         mime="text/plain",
     )
+
+    # ---- PDF report (Task 1): write both a PDF and an HTML version to a temp
+    # file, then offer whichever one actually turned into a real PDF for
+    # download. write_gap_report_pdf() never raises -- it returns False (no
+    # usable PDF) if reportlab is missing or something went wrong, in which
+    # case the HTML file (always produced) is offered instead so office staff
+    # always get SOMETHING to download and print.
+    try:
+        _report_tmp_dir = os.path.join(BASE_DIR, "output", "_app_report_tmp")
+        os.makedirs(_report_tmp_dir, exist_ok=True)
+        _pdf_path = os.path.join(_report_tmp_dir, "gap_report.pdf")
+        _html_path = os.path.join(_report_tmp_dir, "gap_report.html")
+        _pdf_ok = write_gap_report_pdf(gap_report, st.session_state.pack_name, _pdf_path)
+        write_gap_report_html(gap_report, st.session_state.pack_name, _html_path)
+
+        if _pdf_ok and os.path.exists(_pdf_path) and os.path.getsize(_pdf_path) > 0:
+            with open(_pdf_path, "rb") as f:
+                st.download_button(
+                    "⬇️  Download PDF report",
+                    data=f.read(),
+                    file_name="gap_report.pdf",
+                    mime="application/pdf",
+                )
+        else:
+            with open(_html_path, "rb") as f:
+                st.download_button(
+                    "⬇️  Download report (open in browser)",
+                    data=f.read(),
+                    file_name="gap_report.html",
+                    mime="text/html",
+                )
+            st.caption("Open this file and press Ctrl+P to save as PDF.")
+    except Exception as e:
+        _friendly_error("The PDF/report file could not be prepared right now. "
+                         "You can still use the .txt report above.", e)
 
     # ---- Duplicate finder (Feature B): deterministic, embeddings + sha256 only -- no LLM. ----
     dup_items = [
@@ -632,6 +754,7 @@ if st.session_state.run_done:
 
     # ---- Organise into folders ----
     st.markdown('<div class="big-step-title">Step 4 📁 — Organise files into folders</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">This makes a tidy copy of your files, sorted by criterion. Your originals are never touched.</div>', unsafe_allow_html=True)
     st.caption("Copies only — your original files are not moved or changed.")
 
     # At L1/L2 the human must finish deciding every 🟡 file first (all_decided covers
@@ -670,23 +793,37 @@ if st.session_state.run_done:
                 "suggested_name": r.get("suggested_name", ""),
             })
 
-        with st.spinner("Copying files into Praman_Sorted..."):
-            summary = organize(decisions, folder_path, oversight_level, pack_name=st.session_state.pack_name)
+        try:
+            with st.spinner("Copying files into Praman_Sorted..."):
+                summary = organize(decisions, folder_path, oversight_level, pack_name=st.session_state.pack_name)
+        except Exception as e:
+            summary = None
+            _friendly_error(
+                "Something went wrong while copying your files into folders. "
+                "Your original files were not touched. Please try again.", e)
 
-        st.success(
-            f"Copied {summary['copied']} file(s) into folders "
-            f"({summary.get('already_there', 0)} already there, unchanged). "
-            f"{len(summary['errors'])} problem(s)."
-        )
-        st.write(f"**Folders were created here:** `{summary['sorted_dir']}`")
-        st.caption("These are COPIES. Your original files in the source folder are untouched.")
+        if summary:
+            st.success(
+                f"Copied {summary['copied']} file(s) into folders "
+                f"({summary.get('already_there', 0)} already there, unchanged). "
+                f"{len(summary['errors'])} problem(s)."
+            )
+            st.write(f"**Folders were created here:** `{summary['sorted_dir']}`")
+            st.caption("These are COPIES. Your original files in the source folder are untouched.")
 
-        if summary["errors"]:
-            with st.expander(f"⚠️ {len(summary['errors'])} file(s) had a problem"):
-                for err in summary["errors"]:
-                    st.write(f"- {err}")
+            if summary["errors"]:
+                with st.expander(f"⚠️ {len(summary['errors'])} file(s) had a problem"):
+                    for err in summary["errors"]:
+                        st.write(f"- {err}")
 
-        st.session_state.last_sorted_dir = summary["sorted_dir"]
+            st.session_state.last_sorted_dir = summary["sorted_dir"]
+
+            # ---- End-of-flow guidance: plain-words summary of what the office
+            # staff member now has, and where to find each thing. ----
+            st.markdown("#### You are done ✅ — what you have now")
+            st.write(f"1. **A sorted folder** with copies of every file, organised by criterion: `{summary['sorted_dir']}`")
+            st.write("2. **An Excel index** listing every file and where it went — use the 'Download Excel index' button above.")
+            st.write("3. **A gap report (PDF or report file)** showing what evidence is still missing — use the report download button above.")
 
     # ---- Tamper check ----
     # Only shows once a Praman_Sorted folder exists for this source folder (either just
@@ -694,20 +831,26 @@ if st.session_state.run_done:
     default_sorted_dir = os.path.join(folder_path, "Praman_Sorted") if folder_path else None
     check_target = st.session_state.get("last_sorted_dir") or default_sorted_dir
     if check_target and os.path.isdir(check_target):
+        st.caption("This checks that no one has quietly changed, moved, or deleted a filed document by hand.")
         if st.button("🛡 Check my folder", use_container_width=False):
-            with st.spinner("Comparing the folder against its manifest..."):
-                verify_result = verify(check_target)
-            if not verify_result.get("manifest_found"):
-                st.warning(verify_result.get("message", "Could not check this folder."))
-            elif verify_result["ok"]:
-                st.success("Folder matches the record ✔ -- nothing was changed, moved, or deleted by hand.")
-            else:
-                total_issues = (
-                    len(verify_result["changed"]) + len(verify_result["moved"])
-                    + len(verify_result["missing"]) + len(verify_result["extra"])
-                )
-                st.warning(f"{total_issues} issue(s) found -- see below.")
-                st.text(format_verify_text(verify_result))
+            try:
+                with st.spinner("Comparing the folder against its record..."):
+                    verify_result = verify(check_target)
+                if not verify_result.get("manifest_found"):
+                    st.warning(verify_result.get("message", "Could not check this folder."))
+                elif verify_result["ok"]:
+                    st.success("Folder matches the record ✔ -- nothing was changed, moved, or deleted by hand.")
+                else:
+                    total_issues = (
+                        len(verify_result["changed"]) + len(verify_result["moved"])
+                        + len(verify_result["missing"]) + len(verify_result["extra"])
+                    )
+                    st.warning(f"{total_issues} issue(s) found -- see below.")
+                    st.text(format_verify_text(verify_result))
+            except Exception as e:
+                _friendly_error(
+                    "Something went wrong while checking this folder. Your files are safe -- "
+                    "this check just could not run right now.", e)
 
 else:
-    st.caption("Fill in Step 1 and Step 2 above, then press Start sorting.")
+    st.caption("Fill in Step 1 and Step 2 above, then press ▶️ Start sorting.")

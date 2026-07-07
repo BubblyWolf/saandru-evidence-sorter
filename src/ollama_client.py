@@ -8,15 +8,17 @@ import urllib.request
 BASE = "http://localhost:11434"
 EMBED_MODEL = "nomic-embed-text"
 
-# Hardware auto-tiering: weak college office PCs (many are 8GB machines) choke on the
-# 3b chat model -- long waits, sometimes an OOM-driven Ollama crash mid-batch. A stronger
-# machine should keep using the more accurate 3b model unchanged. Three inputs decide the
-# final CHAT_MODEL, in priority order: env override > installed-model reality > RAM tier.
+# Hardware auto-tiering: the 3b chat model at q4 quantization only needs ~2.3GB of RAM to
+# run, so even a typical 8GB no-GPU college office PC can run it acceptably (slower, but
+# usable) -- and 3b's measured accuracy should be kept for nearly all college machines.
+# The 1.5b model is reserved for genuinely weak machines (below 8GB); its accuracy is being
+# measured separately and is NOT yet validated. Three inputs decide the final CHAT_MODEL,
+# in priority order: env override > installed-model reality > RAM tier.
 _HIGH_RAM_MODEL = "qwen2.5:3b-instruct"  # unchanged default -- do not rename this string,
 # the doc cache key (doc_cache.make_key) includes CHAT_MODEL, so any accidental change here
 # invalidates every cached classification on every machine that already ran the old default.
 _LOW_RAM_MODEL = "qwen2.5:1.5b"
-_RAM_TIER_CUTOFF_GB = 12
+_RAM_TIER_CUTOFF_GB = 8
 
 
 def get_total_ram_gb():
@@ -63,14 +65,15 @@ def _installed_model_names():
 
 def _choose_chat_model(ram_gb=None, installed=None):
     """Pick CHAT_MODEL + a one-line human-readable reason. Priority:
-    1. PRAMAN_MODEL env var -- explicit operator override, wins over everything.
-    2. RAM tier (>=12GB -> 3b, <12GB -> prefer 1.5b) reconciled against what Ollama actually
+    1. SAANDRU_MODEL env var (preferred), or the older PRAMAN_MODEL alias -- explicit
+       operator override, wins over everything.
+    2. RAM tier (>=8GB -> 3b, <8GB -> prefer 1.5b) reconciled against what Ollama actually
        has installed -- a preferred model that isn't pulled yet is worse than the other tier
        IF that other tier happens to be installed instead.
     3. If neither/both/unclear, fall back to the RAM-preferred name as-is (Ollama's own error
-       on the first real call is clearer than Praman silently guessing further).
+       on the first real call is clearer than the tool silently guessing further).
     """
-    env_override = os.environ.get("PRAMAN_MODEL")
+    env_override = os.environ.get("SAANDRU_MODEL") or os.environ.get("PRAMAN_MODEL")
     if env_override:
         return env_override, "env override"
 
@@ -82,7 +85,7 @@ def _choose_chat_model(ram_gb=None, installed=None):
         reason_default = f"default 3b (RAM {ram_gb:.0f}GB)"
     else:
         preferred, other = _LOW_RAM_MODEL, _HIGH_RAM_MODEL
-        reason_default = f"low-RAM tier 1.5b (RAM {ram_gb:.0f}GB)"
+        reason_default = f"low-RAM tier 1.5b (RAM {ram_gb:.0f}GB, below 8GB)"
 
     if not installed:
         # couldn't ask Ollama (not running yet, etc) -- keep the RAM-based preference, the
@@ -91,10 +94,10 @@ def _choose_chat_model(ram_gb=None, installed=None):
     if preferred in installed:
         return preferred, reason_default
     if other in installed:
-        print(f"[Praman] {preferred} is not installed; using {other} instead (already pulled).")
+        print(f"[Saandru] {preferred} is not installed; using {other} instead (already pulled).")
         return other, f"fallback to installed {other}"
     # neither tier is installed -- keep the preferred name; Ollama's own error is clearer
-    # than Praman inventing a third guess.
+    # than the tool inventing a third guess.
     return preferred, reason_default
 
 

@@ -5,3 +5,11 @@ __pycache__/
 .venv/
 output/
 *.db
+
+# Task 3: generated report artifacts (gap_report.pdf/.html/.txt, evidence_index.xlsx)
+# can land in the source folder's parent or in output/ depending on entry point --
+# ignore them everywhere so a run never accidentally gets committed.
+gap_report.pdf
+gap_report.html
+gap_report.txt
+evidence_index.xlsx

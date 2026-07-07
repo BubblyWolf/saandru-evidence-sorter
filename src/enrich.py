@@ -1,5 +1,5 @@
 """
-Praman -- enrichment helpers: academic-YEAR detection and SMART document naming.
+Saandru -- enrichment helpers: academic-YEAR detection and SMART document naming.
 
 Both functions are designed to be safe to call on every document in a batch:
   - extract_academic_year() is pure regex (no LLM) -- fast, deterministic, offline.

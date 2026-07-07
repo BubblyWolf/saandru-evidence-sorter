@@ -180,7 +180,7 @@ def make_fake_doc():
         dest,
         "marker",
         "fake OLE .doc header + junk bytes; tool must not crash. "
-        "A REAL .doc test needs an actual file from the scholar.",
+        "A REAL .doc test needs an actual .doc file supplied by a human tester.",
         "?",
     )
 

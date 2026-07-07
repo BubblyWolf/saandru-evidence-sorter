@@ -316,7 +316,7 @@ def _classify_window(doc_text, metrics, metric_vecs, filename, dv=None, hint_met
 
     # --- criterion-level fallback signal ---------------------------------------------------
     # The metric-level vote above is strict: both runs must land on the exact same metric id.
-    # But real docs (JJCET set) showed the model repeatedly nailing the CRITERION (the general
+    # But real docs (a real Tamil Nadu college's DVV set) showed the model repeatedly nailing the CRITERION (the general
     # area, e.g. "1.3 Curriculum Enrichment") while flip-flopping on which specific metric within
     # it applies -- that's a false abstention, not a real failure. So collect a second, looser
     # signal: the criterion of every run's chosen metric, plus the criterion of the top-2

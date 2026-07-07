@@ -1,4 +1,4 @@
-"""Praman -- the Gap Report: "what evidence is MISSING" for a criteria pack.
+"""Saandru -- the Gap Report: "what evidence is MISSING" for a criteria pack.
 
 100% deterministic. This module never calls the LLM -- it only counts and sorts
 decisions the classifier (pipeline.classify, via run.py or app.py) already made.
@@ -159,7 +159,7 @@ def format_gap_report_text(report, pack_name):
     No jargon, short sentences, simple words."""
     lines = []
     lines.append("=" * 78)
-    lines.append(f"PRAMAN GAP REPORT -- {pack_name}")
+    lines.append(f"SAANDRU GAP REPORT -- {pack_name}")
     lines.append("What evidence do we have, and what is still missing?")
     lines.append("=" * 78)
 
@@ -230,7 +230,7 @@ def format_summary_card_text(report, pack_name, college_name=""):
         return round(100.0 * n / docs, 1) if docs else 0.0
 
     lines = []
-    header = f"PRAMAN SUMMARY CARD -- {pack_name}"
+    header = f"SAANDRU SUMMARY CARD -- {pack_name}"
     if college_name:
         header += f" -- {college_name}"
     lines.append("=" * 60)

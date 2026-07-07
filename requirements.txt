@@ -1,0 +1,30 @@
+# Saandru -- Python dependencies
+#
+# Tested with Python 3.11 on Windows. Versions below are pinned to what this
+# repo was built and verified against (`pip freeze` on the dev machine) --
+# newer patch versions of the same package usually work too, but if something
+# breaks, installing these exact versions is the safest fallback.
+#
+# Only packages actually imported by app.py / src/*.py are listed here. Two
+# more things this project needs are NOT pip packages and must be installed
+# separately:
+#   1. Ollama (https://ollama.com) -- the local AI engine. After installing it,
+#      pull the two models this tool uses:
+#         ollama pull nomic-embed-text
+#         ollama pull qwen2.5:3b-instruct
+#         ollama pull qwen2.5:1.5b
+#      (Saandru picks between the two qwen2.5 models automatically based on
+#      this PC's RAM -- see src/ollama_client.py. Pulling both is safest.)
+#   2. Tesseract OCR (https://github.com/UB-Mannheim/tesseract/wiki) -- OPTIONAL,
+#      only needed to read scanned/photographed documents (images, scanned PDFs).
+#      Plain text/Word/Excel/PowerPoint/PDF documents work without it.
+
+streamlit==1.58.0
+PyYAML==6.0.3
+openpyxl==3.1.5
+pdfplumber==0.11.9
+python-docx==1.2.0
+python-pptx==1.0.2
+Pillow==12.2.0
+pytesseract==0.3.13
+reportlab==4.4.9

@@ -1,4 +1,4 @@
-"""Praman runner: point at a folder of documents -> sort each to a NAAC/NBA metric -> Excel index.
+"""Saandru runner: point at a folder of documents -> sort each to a NAAC/NBA metric -> Excel index.
 Usage: python src/run.py <folder> [pack_yaml]
 If the folder has _ground_truth.json (mock set), prints accuracy too.
 """
@@ -21,6 +21,7 @@ import doc_cache
 from gap_report import build_gap_report, format_gap_report_text, format_summary_card_text
 from duplicates import find_duplicates, file_sha256
 from openpyxl import Workbook
+from report_pdf import write_gap_report_pdf, write_gap_report_html
 
 FOLDER = sys.argv[1] if len(sys.argv) > 1 else r"D:\praman\samples\mock"
 PACK = sys.argv[2] if len(sys.argv) > 2 else r"D:\praman\criteria\naac_affiliated_raf2021.yaml"
@@ -215,6 +216,27 @@ def main():
         print(f"Gap report written: {gap_txt_path}")
     except Exception as e:
         print("Gap report save failed:", e)
+
+    # PDF + HTML versions of the same gap report, written next to gap_report.txt.
+    # write_gap_report_pdf() guards its own reportlab import and never raises --
+    # it returns False (no file written) rather than crash this run when
+    # reportlab is missing. write_gap_report_html() has no dependency and is the
+    # fallback a college office PC can always open + print (Ctrl+P) to PDF.
+    gap_pdf_path = os.path.join(os.path.dirname(FOLDER), "gap_report.pdf")
+    try:
+        if write_gap_report_pdf(gap_report, pack_name, gap_pdf_path):
+            print(f"Gap report PDF written: {gap_pdf_path}")
+        else:
+            print("Gap report PDF skipped (reportlab not installed) -- use gap_report.html instead.")
+    except Exception as e:
+        print("Gap report PDF failed:", e)
+
+    gap_html_path = os.path.join(os.path.dirname(FOLDER), "gap_report.html")
+    try:
+        write_gap_report_html(gap_report, pack_name, gap_html_path)
+        print(f"Gap report HTML written: {gap_html_path}")
+    except Exception as e:
+        print("Gap report HTML failed:", e)
 
     if scored:
         labeled = sum(1 for f in files if f in gt and gt[f]["true_criterion"] != "?")
