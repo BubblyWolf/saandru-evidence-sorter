@@ -3,9 +3,17 @@ Usage: python src/run.py <folder> [pack_yaml]
 If the folder has _ground_truth.json (mock set), prints accuracy too.
 """
 import os, sys, json, time
+
+# Windows consoles default to cp1252 -- Tamil filenames or unicode text in markers
+# must never crash a run. Replace unprintable chars instead of raising.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
 sys.path.insert(0, os.path.dirname(__file__))
 from pack import load_metrics
 from ingest import read_document
+from discover import discover_files
 from pipeline import embed_metrics, classify
 from enrich import extract_academic_year, suggest_name
 from openpyxl import Workbook
@@ -19,8 +27,11 @@ def main():
     print(f"Pack: {pack_name} ({len(metrics)} metrics)")
     metric_vecs = embed_metrics(metrics, pack_name)
 
-    files = [f for f in sorted(os.listdir(FOLDER))
-             if os.path.splitext(f)[1].lower() in (".txt", ".docx", ".pdf")]
+    # discover_files() walks subfolders too and never filters by extension --
+    # unsupported/unreadable files still show up here so they land in the
+    # human-review bucket via read_document()'s bracketed markers, instead of
+    # silently vanishing the way a naive os.listdir(FOLDER) extension filter would.
+    files = discover_files(FOLDER)
     gt = {}
     gt_path = os.path.join(FOLDER, "_ground_truth.json")
     if os.path.exists(gt_path):
@@ -99,15 +110,19 @@ def main():
     # Split into metric-level commits (exact metric agreed by both runs) and criterion-only
     # commits (the new fallback: right area, exact metric was a best guess) -- these carry
     # different confidence and should not be silently merged into one number.
-    committed_pct = (100 * auto_correct_crit // auto_count) if auto_count else 0
-    print(f"COMMITTED (status=auto): {auto_count}/{len(files)} docs, "
-          f"{auto_correct_crit}/{auto_count if auto_count else 1} correct on criterion "
-          f"({committed_pct}%)  |  ABSTAINED (status=review): {review_count}/{len(files)}")
+    print(f"COMMITTED (status=auto): {auto_count}/{len(files)} docs  |  "
+          f"ABSTAINED (status=review): {review_count}/{len(files)}")
     print(f"COMMITTED metric: {metric_commit_count} | COMMITTED criterion-only: {crit_commit_count} "
           f"| ABSTAINED: {review_count}")
-    print(f"committed-correct on criterion: {auto_correct_crit}/{metric_commit_count + crit_commit_count} "
-          f"(metric-level {metric_commit_correct}/{metric_commit_count if metric_commit_count else 1}, "
-          f"criterion-only {crit_commit_correct}/{crit_commit_count if crit_commit_count else 1})")
+    if scored:
+        # correctness lines only make sense when a ground-truth file graded something --
+        # printing "0/10 correct" on an unlabeled folder reads like total failure when
+        # in truth nothing was graded at all (torture-run lesson).
+        committed_pct = (100 * auto_correct_crit // auto_count) if auto_count else 0
+        print(f"committed-correct on criterion: {auto_correct_crit}/{auto_count if auto_count else 1} "
+              f"({committed_pct}%) "
+              f"(metric-level {metric_commit_correct}/{metric_commit_count if metric_commit_count else 1}, "
+              f"criterion-only {crit_commit_correct}/{crit_commit_count if crit_commit_count else 1})")
 
 
 if __name__ == "__main__":

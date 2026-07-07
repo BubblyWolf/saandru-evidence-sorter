@@ -8,11 +8,17 @@ import csv
 import io
 import os
 import shutil
+import zipfile
 
 MAX_XLSX_CHARS = 4000
 OCR_TEXT_PER_PAGE_THRESHOLD = 40  # avg chars/page below this => treat PDF as scanned
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
+
+# Every extension read_document() can turn into real text (not counting the
+# always-on "[UNSUPPORTED FORMAT: ...]" fallback for anything else). discover.py
+# re-exports this so the whole app agrees on what "supported" means.
+SUPPORTED_EXTS = frozenset({".txt", ".docx", ".doc", ".pdf", ".csv", ".xlsx", ".pptx"} | IMAGE_EXTS)
 
 
 # Standard places the Tesseract binary lands on Windows when it is NOT on PATH.
@@ -69,6 +75,63 @@ def _ocr_image(pil_image):
     Returns extracted text (may be empty string)."""
     import pytesseract
     return pytesseract.image_to_string(pil_image) or ""
+
+
+def _sniff_kind(path):
+    """Read the first few bytes of `path` and guess its REAL kind from magic bytes,
+    independent of whatever extension it happens to wear. Real college folders have
+    files with wrong or missing extensions (a scan saved as "scan001" with no
+    extension, a Word file someone renamed to ".pdf"), and we must not trust the
+    extension blindly. Returns one of: "pdf", "docx", "xlsx", "pptx", "doc" (legacy
+    OLE), "image", or None if nothing recognisable was sniffed (caller then falls
+    back to the extension). Never raises -- any read/parse problem just means "None".
+    """
+    try:
+        with open(path, "rb") as f:
+            head = f.read(8)
+    except Exception:
+        return None
+
+    if not head:
+        return None
+
+    if head.startswith(b"%PDF"):
+        return "pdf"
+    if head.startswith(b"\xff\xd8\xff") or head.startswith(b"\x89PNG"):
+        return "image"
+    if head.startswith(b"\xd0\xcf\x11\xe0"):
+        # Legacy OLE compound file -- could be .doc, .xls, .ppt. We only implement
+        # a .doc reader today, so this is treated as "doc" and _read_doc() itself
+        # is defensive about content that turns out not to actually be a Word file.
+        return "doc"
+    if head.startswith(b"PK\x03\x04"):
+        # Modern Office formats are zip archives with a telltale internal folder.
+        try:
+            with zipfile.ZipFile(path) as zf:
+                names = zf.namelist()
+        except Exception:
+            return None
+        if any(n.startswith("word/") for n in names):
+            return "docx"
+        if any(n.startswith("xl/") for n in names):
+            return "xlsx"
+        if any(n.startswith("ppt/") for n in names):
+            return "pptx"
+        return None
+
+    return None
+
+
+# Map a sniffed kind to the reader that already exists for that kind. Populated
+# after the reader functions are defined (see bottom of the reader section).
+_SNIFF_KIND_TO_EXT = {
+    "pdf": ".pdf",
+    "docx": ".docx",
+    "xlsx": ".xlsx",
+    "pptx": ".pptx",
+    "doc": ".doc",
+    "image": ".jpg",  # any image ext works -- _read_image() doesn't branch on it
+}
 
 
 def _read_txt(path):
@@ -135,9 +198,110 @@ def _read_pptx(path):
     return "\n".join(parts)
 
 
+def _read_doc(path):
+    """Legacy binary .doc reader. Word's binary format has no simple pure-Python
+    parser worth depending on, so the pragmatic local-Windows-PC approach is to
+    drive real Microsoft Word via COM automation (if installed) to pull the text,
+    then close Word again. If pywin32 is not installed, Word is not installed, or
+    COM automation fails for any reason (corrupt file, a real OLE file that isn't
+    actually a Word doc, etc.) we return a clear marker instead of raising --
+    college office PCs usually DO have Word, but must never be required to.
+    """
+    try:
+        import win32com.client
+    except Exception:
+        return "[UNSUPPORTED FORMAT: .doc — could not auto-convert; please re-save as .docx]"
+
+    word = None
+    doc = None
+    try:
+        # DispatchEx starts a fresh, isolated Word process instead of reusing/
+        # hijacking one the user may already have open with unsaved work.
+        word = win32com.client.DispatchEx("Word.Application")
+        word.Visible = False
+        word.DisplayAlerts = 0  # 0 = wdAlertsNone -- never let a popup block us
+        # ReadOnly + AddToRecentFiles=False keeps this invisible to the user and
+        # never risks modifying the source file on disk.
+        doc = word.Documents.Open(
+            os.path.abspath(path), ReadOnly=True, AddToRecentFiles=False
+        )
+        text = doc.Content.Text
+        # Word will "open" almost any byte soup and hand back mojibake instead of
+        # raising -- the torture test showed such garbage sailing on to the
+        # classifier and getting auto-committed with high confidence. Gate the
+        # output: if the text doesn't look like readable words, mark it unreadable
+        # so it lands in human review instead of a confident wrong folder. (A
+        # genuine Tamil/Hindi .doc also fails this ASCII-leaning check -- that's
+        # the safe direction: review bucket, never a wrong commit.)
+        if _looks_garbled(text):
+            return "[UNREADABLE: .doc opened but content looks garbled/corrupt — please re-save as .docx and retry]"
+        return text
+    except Exception:
+        return "[UNSUPPORTED FORMAT: .doc — could not auto-convert; please re-save as .docx]"
+    finally:
+        # Must NEVER leave a hidden WINWORD.EXE process running on the college PC,
+        # even if opening/reading the doc above raised partway through.
+        try:
+            if doc is not None:
+                doc.Close(False)
+        except Exception:
+            pass
+        try:
+            if word is not None:
+                word.Quit()
+        except Exception:
+            pass
+
+
+def _looks_garbled(text, min_ratio=0.55):
+    """Heuristic mojibake detector for legacy-.doc extraction ONLY (do not apply to
+    .txt/.pdf paths, where non-English content is legitimate and handled elsewhere).
+    Measures the fraction of characters that look like normal readable prose
+    (letters, digits, whitespace, common punctuation). Word-decoded byte soup is
+    dominated by symbols/CJK/control chars and lands far below any real document.
+    Empty text is NOT garbled (the empty-document marker handles that case)."""
+    stripped = text.strip() if text else ""
+    if not stripped:
+        return False
+    sample = stripped[:4000]
+    ok = sum(
+        1 for ch in sample
+        if ch.isascii() and (ch.isalnum() or ch.isspace() or ch in ".,;:!?()-'\"/&%@")
+    )
+    return (ok / len(sample)) < min_ratio
+
+
+def _is_password_error(exc):
+    """True if `exc` (or anything chained beneath it) is pdfminer's
+    PDFPasswordIncorrect. pdfplumber.open() wraps the original pdfminer exception
+    inside its own PdfminerException, but raises it from within the except block,
+    so Python's implicit exception chaining (__context__) still carries the real
+    cause -- walk that chain instead of relying on a fragile string match."""
+    try:
+        from pdfminer.pdfdocument import PDFPasswordIncorrect
+    except Exception:
+        return False
+    seen = set()
+    cur = exc
+    while cur is not None and id(cur) not in seen:
+        if isinstance(cur, PDFPasswordIncorrect):
+            return True
+        seen.add(id(cur))
+        cur = cur.__cause__ or cur.__context__
+    return False
+
+
 def _read_pdf(path):
     import pdfplumber
-    with pdfplumber.open(path) as pdf:
+
+    try:
+        pdf_ctx = pdfplumber.open(path)
+    except Exception as e:
+        if _is_password_error(e):
+            return "[UNREADABLE: password-protected PDF — remove the password and retry]"
+        raise
+
+    with pdf_ctx as pdf:
         page_texts = [(pg.extract_text() or "") for pg in pdf.pages]
         num_pages = len(pdf.pages)
         text = "\n".join(page_texts)
@@ -190,27 +354,53 @@ def _is_marker(result):
     return isinstance(result, str) and result.startswith(_KNOWN_MARKER_PREFIXES)
 
 
+# Extensions we can dispatch on directly, mapped to the same "kind" vocabulary
+# _sniff_kind() uses, so the two can be compared and reconciled. ".txt"/".csv"
+# have no magic-byte signature, so sniffing never claims those kinds -- they are
+# only ever reached via the extension.
+_EXT_TO_KIND = {".docx": "docx", ".doc": "doc", ".xlsx": "xlsx", ".pptx": "pptx",
+                ".pdf": "pdf", ".txt": "txt", ".csv": "csv"}
+for _img_ext in IMAGE_EXTS:
+    _EXT_TO_KIND[_img_ext] = "image"
+
+
 def read_document(path):
     ext = os.path.splitext(path)[1].lower()
+    ext_kind = _EXT_TO_KIND.get(ext)  # None for unknown/missing extensions
+
+    # Real college folders have files whose extension lies: a scan saved with no
+    # extension at all, or a Word file someone renamed to ".pdf". Sniff the real
+    # magic bytes and use them whenever the extension is missing/unknown, or when
+    # it flatly disagrees with what the bytes actually are ("trust the sniff").
+    # ".txt"/".csv" have no magic-byte signature (sniff never returns those kinds),
+    # so a plain text/csv file correctly sniffs as None and keeps its extension.
+    sniffed = _sniff_kind(path)
+    if sniffed is not None and sniffed != ext_kind:
+        kind = sniffed
+    else:
+        kind = ext_kind
+
     try:
-        if ext == ".txt":
+        if kind == "txt":
             result = _read_txt(path)
-        elif ext == ".docx":
+        elif kind == "docx":
             result = _read_docx(path)
-        elif ext == ".doc":
-            return "[UNSUPPORTED FORMAT: .doc — please re-save as .docx]"
-        elif ext == ".csv":
+        elif kind == "doc":
+            result = _read_doc(path)
+        elif kind == "csv":
             result = _read_csv(path)
-        elif ext == ".xlsx":
+        elif kind == "xlsx":
             result = _read_xlsx(path)
-        elif ext == ".pptx":
+        elif kind == "pptx":
             result = _read_pptx(path)
-        elif ext == ".pdf":
+        elif kind == "pdf":
             result = _read_pdf(path)
-        elif ext in IMAGE_EXTS:
+        elif kind == "image":
             result = _read_image(path)
-        else:
+        elif ext:
             return f"[UNSUPPORTED FORMAT: {ext}]"
+        else:
+            return "[UNSUPPORTED FORMAT: no extension — unrecognised file type]"
     except Exception as e:
         return f"[UNREADABLE: {e}]"
 

@@ -16,6 +16,13 @@ import sys
 import json
 import time
 
+# Windows consoles default to cp1252 -- Tamil filenames or unicode text in markers
+# must never crash a run. Replace unprintable chars instead of raising.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 sys.path.insert(0, os.path.dirname(__file__))
 from pack import load_metrics
 from ingest import read_document

@@ -19,13 +19,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 from pack import load_metrics          # noqa: E402
 from pipeline import embed_metrics, classify  # noqa: E402
 from ingest import read_document       # noqa: E402
+from discover import discover_files    # noqa: E402
 from organize import organize          # noqa: E402
 from enrich import extract_academic_year, suggest_name  # noqa: E402
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CRITERIA_DIR = os.path.join(BASE_DIR, "criteria")
-
-SUPPORTED_EXT = (".txt", ".docx", ".pdf")
 
 # Friendly labels for known criteria packs. Accreditation facts this UI must get right:
 #   - NAAC accredits the WHOLE INSTITUTION (any college, including engineering colleges).
@@ -187,12 +186,16 @@ if start_clicked:
     if not folder_path or not os.path.isdir(folder_path):
         st.error("That folder path does not exist. Please check it and try again.")
     else:
-        files = sorted(
-            f for f in os.listdir(folder_path)
-            if os.path.splitext(f)[1].lower() in SUPPORTED_EXT
-        )
+        # discover_files() walks subfolders and never filters by extension --
+        # every file (including unsupported/unreadable ones) shows up so it can
+        # get a proper bracketed-marker reason in the "Could not read" tab
+        # instead of silently disappearing.
+        files = discover_files(folder_path)
         if not files:
-            st.warning("No .txt, .docx, or .pdf files were found in that folder.")
+            st.warning(
+                "No files were found in that folder (this scans all common formats — "
+                "txt/docx/doc/pdf/csv/xlsx/pptx/images — including subfolders)."
+            )
         else:
             # reset state for a fresh run
             st.session_state.results = []
