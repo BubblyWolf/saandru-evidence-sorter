@@ -451,7 +451,7 @@ criteria:
           - id: "4.3.3"
             type: "QlM"
             verify_type: true
-            text: "[VERIFY - source PDF has overlapping text layers on this metric; hand-check against the manual] Ban d wiSdttuhd oefn ti n- tceornmept uctoenr nraetcioti on in the Institution."
+            text: "Bandwidth of internet connection in the Institution."
             evidence_hints: []   # filled in Phase 0.5 (typical proof documents)
           - id: "4.3.4"
             type: "QlM"
