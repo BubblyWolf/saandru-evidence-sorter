@@ -243,7 +243,9 @@ if start_clicked:
                 chosen = result["chosen"]
 
                 year_info = extract_academic_year(text)
-                suggested_name = suggest_name(
+                # Task 1: reuse the title piggybacked onto the adjudication call instead of a
+                # second LLM call; fall back to suggest_name() only when it's empty.
+                suggested_name = result.get("title") or suggest_name(
                     text,
                     criterion_name=(chosen["criterion_name"] if chosen else ""),
                     metric_id=(chosen["id"] if chosen else ""),

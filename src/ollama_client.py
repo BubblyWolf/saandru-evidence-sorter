@@ -19,7 +19,9 @@ def _post(path, payload, timeout=120):
 
 def embed(text, model=EMBED_MODEL):
     """Return a vector for one string."""
-    out = _post("/api/embeddings", {"model": model, "prompt": text})
+    # keep_alive="10m" -- without it Ollama unloads the model between calls and pays a
+    # multi-second reload on the next one; keeping it warm for the whole batch run is free.
+    out = _post("/api/embeddings", {"model": model, "prompt": text, "keep_alive": "10m"})
     return out["embedding"]
 
 
@@ -30,7 +32,10 @@ def generate_json(prompt, model=CHAT_MODEL, temperature=0.0):
         "prompt": prompt,
         "stream": False,
         "format": "json",
-        "options": {"temperature": temperature},
+        "keep_alive": "10m",  # see embed() -- avoid reload latency between documents
+        # num_predict caps the reply length: our JSON answers are tiny (a letter, a float,
+        # a short quote), so an uncapped model can ramble and pay tail latency for nothing.
+        "options": {"temperature": temperature, "num_predict": 160},
     })
     raw = out.get("response", "").strip()
     try:

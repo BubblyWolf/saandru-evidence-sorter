@@ -14,8 +14,10 @@ sys.path.insert(0, os.path.dirname(__file__))
 from pack import load_metrics
 from ingest import read_document
 from discover import discover_files
-from pipeline import embed_metrics, classify
+from pipeline import embed_metrics, classify, _pack_hash
 from enrich import extract_academic_year, suggest_name
+from ollama_client import CHAT_MODEL
+import doc_cache
 from openpyxl import Workbook
 
 FOLDER = sys.argv[1] if len(sys.argv) > 1 else r"D:\praman\samples\mock"
@@ -45,19 +47,40 @@ def main():
     auto_count, auto_correct_crit, review_count = 0, 0, 0
     metric_commit_count, metric_commit_correct = 0, 0
     crit_commit_count, crit_commit_correct = 0, 0
+    pack_key = _pack_hash(metrics)
     print(f"\nClassifying {len(files)} documents...\n" + "-" * 78)
     for fn in files:
         t0 = time.time()
-        text = read_document(os.path.join(FOLDER, fn))
-        r = classify(text, metrics, metric_vecs, filename=fn)
+        full_path = os.path.join(FOLDER, fn)
+
+        # Task 4: cache key = sha256(file bytes + pack hash + model name) -- an unchanged file
+        # against the same pack/model always hits, an edited file (even same extracted text)
+        # always misses. Cache stores the classify result + year + title together.
+        cache_key = doc_cache.make_key(full_path, pack_key, CHAT_MODEL)
+        cached = doc_cache.get(cache_key)
+        cached_tag = ""
+        if cached:
+            r = cached["result"]
+            year = cached["year"]
+            suggested_name = cached["title"]
+            cached_tag = " [cached]"
+        else:
+            text = read_document(full_path)
+            r = classify(text, metrics, metric_vecs, filename=fn)
+            year_info = extract_academic_year(text)
+            year = year_info["year"]
+            # Task 1: prefer the title piggybacked on the adjudication call (free) -- only fall
+            # back to enrich.suggest_name()'s own LLM call when the adjudication title is empty
+            # (e.g. the doc abstained before any vote ran, or the model returned garbage).
+            c0 = r["chosen"]
+            suggested_name = r.get("title") or suggest_name(
+                text, criterion_name=(c0["criterion_name"] if c0 else ""),
+                metric_id=(c0["id"] if c0 else "NONE"))
+            doc_cache.put(cache_key, {"result": r, "year": year, "title": suggested_name})
+
         c = r["chosen"]
         crit = c["criterion"] if c else "-"
         mid = c["id"] if c else "NONE"
-
-        year_info = extract_academic_year(text)
-        year = year_info["year"]
-        suggested_name = suggest_name(text, criterion_name=(c["criterion_name"] if c else ""),
-                                       metric_id=mid)
 
         ws.append([fn, crit, c["ki"] if c else "-", mid, c["text"][:90] if c else "-",
                    r["confidence"], r["status"], r["evidence"][:120],
@@ -91,7 +114,7 @@ def main():
                 flag = "[ambiguous -> " + ("review OK" if r["status"] == "review" else "MISSED") + "]"
         lvl_tag = {"metric": "", "criterion": "~crit"}.get(commit_level, "")
         year_tag = f" yr={year}" if year else ""
-        print(f"{fn[:34]:34} -> C{crit} {mid:8} conf={r['confidence']:.2f} {r['status']:6}{lvl_tag:5} {dt:4.1f}s{year_tag} {flag}")
+        print(f"{fn[:34]:34} -> C{crit} {mid:8} conf={r['confidence']:.2f} {r['status']:6}{lvl_tag:5} {dt:4.1f}s{cached_tag}{year_tag} {flag}")
 
     out = os.path.join(os.path.dirname(FOLDER), "evidence_index.xlsx")
     try:

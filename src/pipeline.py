@@ -3,8 +3,12 @@ Code does the structure; the 3B model only picks among up to 5 and quotes eviden
 small model is enough.
 """
 import hashlib
-import json, math, os
+import json, math, os, re
 from ollama_client import embed, generate_json
+
+# Bump this whenever classify()'s LOGIC changes (prompt, voting, thresholds, fast path):
+# doc_cache keys include it, so old cached answers from an older brain are never served.
+PIPELINE_VERSION = "3"
 
 CACHE = os.path.join(os.path.dirname(__file__), "..", "output", "_metric_vectors.json")
 REVIEW_THRESHOLD = 0.55   # below this confidence -> human review queue
@@ -89,7 +93,37 @@ CANDIDATE METRICS:
 {cands}
 
 Pick the single best candidate. Reply ONLY as JSON:
-{{"choice": "A" or "B" or "C" or "D" or "E" or "NONE", "confidence": a number 0.0 to 1.0, "evidence": "one exact sentence copied from the document that justifies it"}}"""
+{{"choice": "A" or "B" or "C" or "D" or "E" or "NONE", "confidence": a number 0.0 to 1.0, "evidence": "one exact sentence copied from the document that justifies it", "title": "a 3-6 word plain-English title for what this document IS, e.g. Scholarship Beneficiary List"}}"""
+
+# fast-path thresholds for Task 2 (_classify_window): a single vote can stand in for the
+# usual 2-vote self-consistency check ONLY when every one of these holds -- deliberately
+# strict, because skipping the second vote trades a little safety net for latency and we
+# only want to spend that trade on docs that are genuinely easy.
+FAST_PATH_MODEL_CONF = 0.85
+# The #2 shortlist candidate must sit clearly BELOW #1 in raw cosine similarity for the
+# fast path to fire. (An earlier version tested _normalize_sim of the chosen top candidate,
+# but min-max normalization within the shortlist makes the top candidate exactly 1.0 by
+# definition -- that condition could never fail. This raw-gap test is the real thing.)
+FAST_PATH_MIN_GAP = 0.02
+
+
+def _clean_title(raw):
+    """Strip quotes/brackets, collapse whitespace, cap 60 chars, Title Case -- same shape as
+    enrich.suggest_name's cleanup so callers can treat result["title"] identically to it."""
+    if not raw:
+        return ""
+    s = str(raw).replace("\n", " ").replace("\r", " ")
+    s = s.strip().strip('"\'').strip()
+    s = re.sub(r'[\[\]{}"]', "", s)
+    s = " ".join(s.split())
+    if not s:
+        return ""
+    s = s[:60]
+    # title-case each word but don't mangle words that are already all-caps acronyms (e.g. "MoU", "NAAC")
+    words = []
+    for w in s.split(" "):
+        words.append(w if (w.isupper() and len(w) > 1) else w.capitalize())
+    return " ".join(words)
 
 
 def _adjudicate(doc_text, cands, temperature):
@@ -124,7 +158,8 @@ def _single_run(doc_text, cands, letters, temperature):
     except (TypeError, ValueError):
         conf = 0.0
     ev = str(r["evidence"])[:300] if r.get("evidence") else ""
-    return ch, conf, ev
+    title = _clean_title(r.get("title", ""))
+    return ch, conf, ev, title
 
 
 def _classify_window(doc_text, metrics, metric_vecs, filename):
@@ -144,24 +179,51 @@ def _classify_window(doc_text, metrics, metric_vecs, filename):
             "chosen": None, "confidence": 0.0, "agree": False, "status": "review",
             "reason": "low_similarity", "evidence": "", "top_sim": top_sim,
             "candidates": [m["id"] for m, _ in cands],
-            "commit_level": None, "metric_uncertain": False,
+            "commit_level": None, "metric_uncertain": False, "title": "", "fast_path": False,
         }
 
     letters = ["A", "B", "C", "D", "E"][:len(cands)]
     choices, confs, evidence = [], [], ""
-    for temperature in (0.3, 0.3):
-        ch, conf, ev = _single_run(doc_text, cands, letters, temperature)
-        choices.append(ch); confs.append(conf)
-        if not evidence and ev:
-            evidence = ev
 
-    agree = choices[0] == choices[1]
-    tiebreak_used = False
-    if not agree:
+    # --- vote 1 -------------------------------------------------------------------------
+    ch1, conf1, ev1, title = _single_run(doc_text, cands, letters, 0.3)  # title only kept from vote 1
+    choices.append(ch1); confs.append(conf1)
+    if ev1:
+        evidence = ev1
+
+    # --- Task 2: confident-single-vote fast path -----------------------------------------
+    # If vote 1 alone already looks unambiguous from TWO independent angles (the model says
+    # so AND the embedder's own ranking agrees, with real separation from the rest of the
+    # shortlist), skip the normal second self-consistency vote entirely. This is deliberately
+    # conservative -- all four conditions must hold -- because the whole point of the second
+    # vote is to catch the model flip-flopping; we only skip that safety check when the doc
+    # is easy enough that flip-flopping is very unlikely.
+    fast_path = False
+    top_candidate_id = cands[0][0]["id"]
+    chosen_is_top = (ch1 in letters) and (cands[letters.index(ch1)][0]["id"] == top_candidate_id)
+    # raw similarity gap between #1 and #2: only skip the second vote when the embedder's
+    # top pick is not in a near-tie with its runner-up (a tie is exactly when the model
+    # flip-flops, i.e. when the self-consistency vote earns its keep).
+    top2_gap = (cands[0][1] - cands[1][1]) if len(cands) > 1 else 1.0
+    if (ch1 in letters and conf1 >= FAST_PATH_MODEL_CONF and chosen_is_top
+            and top2_gap >= FAST_PATH_MIN_GAP):
+        fast_path = True
+        agree = True
+        tiebreak_used = False
+    else:
+        # --- vote 2 (normal path) --------------------------------------------------------
+        ch2, conf2, ev2, _title2 = _single_run(doc_text, cands, letters, 0.3)
+        choices.append(ch2); confs.append(conf2)
+        if not evidence and ev2:
+            evidence = ev2
+
+        agree = choices[0] == choices[1]
+        tiebreak_used = False
+    if not fast_path and not agree:
         # one extra tiebreaker vote instead of just halving confidence: run a third time and
         # let majority decide. This recovers cases where the model flip-flopped on a coin-toss
         # between two close candidates, rather than punishing confidence for a single disagreement.
-        ch3, conf3, ev3 = _single_run(doc_text, cands, letters, 0.3)
+        ch3, conf3, ev3, _title3 = _single_run(doc_text, cands, letters, 0.3)
         choices.append(ch3); confs.append(conf3)
         tiebreak_used = True
         if not evidence and ev3:
@@ -268,6 +330,8 @@ def _classify_window(doc_text, metrics, metric_vecs, filename):
         "candidates": [m["id"] for m, _ in cands],
         "commit_level": commit_level,
         "metric_uncertain": metric_uncertain,
+        "title": title,
+        "fast_path": fast_path,
     }
 
 
