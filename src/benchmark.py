@@ -74,6 +74,10 @@ def _score_set(name, folder, pack_path):
             continue
         t0 = time.time()
         text = read_document(path)
+        # pack_name deliberately NOT passed: with it, classify() would consult the
+        # corrections memory, and a machine with saved human corrections for these very
+        # files would score a taught engine against the frozen baseline -- silent grade
+        # inflation. The benchmark must always measure the UN-taught engine.
         r = classify(text, metrics, metric_vecs, filename=fn)
         dt = time.time() - t0
         total_time += dt

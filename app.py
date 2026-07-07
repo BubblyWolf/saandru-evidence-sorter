@@ -23,6 +23,8 @@ from discover import discover_files    # noqa: E402
 from organize import organize          # noqa: E402
 from enrich import extract_academic_year, suggest_name  # noqa: E402
 from gap_report import build_gap_report, format_gap_report_text, format_summary_card_text  # noqa: E402
+import corrections                     # noqa: E402  -- Feature A: learn from human corrections
+from duplicates import find_duplicates, file_sha256  # noqa: E402  -- Feature B: duplicate finder
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CRITERIA_DIR = os.path.join(BASE_DIR, "criteria")
@@ -235,12 +237,17 @@ if start_clicked:
                         reason = "This file type is not supported yet."
                     record["reason"] = reason
                     record["status"] = "unreadable"
+                    # sha256 still works on an unreadable file (it's a hash of raw bytes, no
+                    # parsing needed) -- two unreadable copies of the same bad file should still
+                    # show up as an exact duplicate. No doc_vec though: nothing was classified.
+                    record["sha256"] = file_sha256(full_path)
+                    record["doc_vec"] = None
                     st.session_state.results.append(record)
                     _log(fn, "-", 0.0, "could not read")
                     progress_bar.progress(i / total)
                     continue
 
-                result = classify(text, metrics, metric_vecs)
+                result = classify(text, metrics, metric_vecs, pack_name=pack_name)
                 chosen = result["chosen"]
 
                 year_info = extract_academic_year(text)
@@ -265,6 +272,14 @@ if start_clicked:
                     "year": year_info["year"],
                     "year_confidence": year_info["confidence"],
                     "suggested_name": suggested_name,
+                    # Feature A: this doc's embedding, kept so corrections.record() can be called
+                    # later if a human corrects/confirms it in the review tab below.
+                    "doc_vec": result.get("doc_vec"),
+                    # True when corrections memory recognised this doc outright (>=0.95 similarity
+                    # to a past human correction) -- surfaced as a small tag in the results table.
+                    "learned": result.get("learned", False),
+                    # Feature B: file hash for exact-duplicate detection across this run.
+                    "sha256": file_sha256(full_path),
                 })
 
                 # decide bucket based on oversight level + engine status
@@ -327,6 +342,9 @@ if st.session_state.run_done:
                     "Year": r.get("year") or "-",
                     "Confidence": f"{r.get('confidence', 0):.0%}",
                     "Evidence quote": r.get("evidence", ""),
+                    # Feature A: shows when corrections memory recognised this exact document
+                    # from an earlier human correction, instead of the usual vote.
+                    "Notes": "🧠 learned from your earlier correction" if r.get("learned") else "",
                 })
             st.dataframe(table_rows, use_container_width=True, hide_index=True)
 
@@ -382,6 +400,11 @@ if st.session_state.run_done:
                 )
                 r["suggested_name"] = edited_name
 
+                st.caption(
+                    "Your corrections teach the tool -- similar documents will be suggested "
+                    "this metric automatically next time."
+                )
+
                 col_accept, col_skip = st.columns([1, 1])
                 with col_accept:
                     accept_clicked = st.button("✅ Accept", key=f"accept_{r['file']}_{idx}", use_container_width=True)
@@ -411,6 +434,14 @@ if st.session_state.run_done:
                 r["commit_level"] = "metric"
                 suggestion_txt = f"{c['id']} ({c['criterion_name']})" if c else "no confident match"
                 _log(r["file"], suggestion_txt, r.get("confidence", 0), "accepted")
+                # Feature A: remember this doc's embedding + the confirmed metric so a future
+                # similar document gets suggested (or auto-filed) the same way. Only meaningful
+                # when there WAS a metric to confirm -- "no confident match" teaches nothing.
+                if c:
+                    corrections.record(
+                        st.session_state.pack_name, c["id"], r.get("doc_vec"), r["file"],
+                        note="accepted",
+                    )
                 st.rerun()
 
             if skip_clicked:
@@ -431,6 +462,12 @@ if st.session_state.run_done:
                         # human hand-picked the metric -- strongest evidence, same as Accept.
                         r["commit_level"] = "metric"
                         _log(r["file"], f"{new_metric['id']} ({new_metric['criterion_name']})", 1.0, "changed by human")
+                        # Feature A: the human picked a DIFFERENT metric than the engine
+                        # suggested -- this is the most valuable kind of correction to remember.
+                        corrections.record(
+                            st.session_state.pack_name, new_metric["id"], r.get("doc_vec"),
+                            r["file"], note="changed by human",
+                        )
                     st.rerun()
 
             if decided:
@@ -519,6 +556,21 @@ if st.session_state.run_done:
         file_name="gap_report.txt",
         mime="text/plain",
     )
+
+    # ---- Duplicate finder (Feature B): deterministic, embeddings + sha256 only -- no LLM. ----
+    dup_items = [
+        {"filename": r["file"], "sha256": r.get("sha256"), "doc_vec": r.get("doc_vec")}
+        for r in results
+    ]
+    dup_groups = find_duplicates(dup_items)
+    if dup_groups:
+        with st.expander(f"⚠️ Possible duplicates found ({len(dup_groups)} group(s))", expanded=False):
+            st.warning("These files look like copies of each other -- keep one, remove the rest.")
+            for i, g in enumerate(dup_groups, start=1):
+                kind_label = "identical file" if g["kind"] == "exact" else "looks like the same document"
+                st.write(f"**Group {i}** ({kind_label}):")
+                for f in g["files"]:
+                    st.write(f"- {f}")
 
     st.divider()
 

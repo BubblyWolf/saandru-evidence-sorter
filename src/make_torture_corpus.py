@@ -77,6 +77,10 @@ def make_nested_real_pdfs():
         ("5.1.1.pdf", "NAAC WORK/final/New Document (2).pdf", "5"),
         ("6.2.2.pdf", "NAAC WORK/final/final FINAL updated.pdf", "6"),
         ("7.1.2.pdf", "backup old laptop/xerox101.pdf", "7"),
+        # deliberate second copy of an already-copied source (same bytes as
+        # "NAAC WORK/final/New Document (2).pdf" above) -- WITHIN messy_torture this time, so
+        # the duplicate-finder (Feature B) has a true exact-match pair to catch in a live test.
+        ("5.1.1.pdf", "student data/old laptop backup/New Document (2) - Copy.pdf", "5"),
     ]
     for src_name, dest_rel, crit in mapping:
         src = SRC_PDFS / src_name

@@ -6,9 +6,28 @@ import hashlib
 import json, math, os, re
 from ollama_client import embed, generate_json
 
+# corrections memory (Feature A) is optional: a fresh checkout with no output/_corrections.json
+# yet, or a corrupted one, must classify exactly like before -- so the import itself is
+# defensive. corrections.py already turns "missing/corrupt file" into "empty memory"; this
+# try/except only guards against the module itself failing to import.
+try:
+    import corrections
+except Exception:
+    corrections = None
+
 # Bump this whenever classify()'s LOGIC changes (prompt, voting, thresholds, fast path):
 # doc_cache keys include it, so old cached answers from an older brain are never served.
-PIPELINE_VERSION = "3"
+# v4: corrections-memory fast path/hint injection + classify() now always returns doc_vec --
+# both are new LOGIC (a document that used to land in review can now auto-file), so old
+# cached answers (from a brain that didn't know about corrections) must not be served.
+PIPELINE_VERSION = "4"
+
+# corrections-memory thresholds (Feature A): a remembered document doesn't have to be
+# byte-identical to fire -- nomic-embed-text similarity this high means "basically the same
+# kind of document" in practice (same letterhead/template, minor date or name edits).
+LEARNED_AUTO_THRESHOLD = 0.95    # near-identical to a corrected doc -> trust it outright
+LEARNED_HINT_THRESHOLD = 0.88    # similar enough to nudge the vote, not enough to skip it
+LEARNED_HINT_BOOST = 0.05        # same magnitude as KEYWORD_BOOST -- a nudge, not a veto
 
 CACHE = os.path.join(os.path.dirname(__file__), "..", "output", "_metric_vectors.json")
 REVIEW_THRESHOLD = 0.55   # below this confidence -> human review queue
@@ -69,9 +88,22 @@ def _keyword_hits(text):
     return {t for t in KEYWORD_BOOST_TERMS if t in low}
 
 
-def shortlist(doc_text, metrics, metric_vecs, filename="", k=SHORTLIST_K):
-    """Embed the doc, rank metrics by cosine similarity, apply a small keyword boost, return top-k."""
-    dv = embed(doc_text[:1500])
+def shortlist(doc_text, metrics, metric_vecs, filename="", k=SHORTLIST_K, dv=None, hint_metric_id=None):
+    """Embed the doc, rank metrics by cosine similarity, apply a small keyword boost, return top-k.
+
+    dv: precomputed doc embedding. classify() computes embed(doc_text[:1500]) once itself (so it
+    can also feed corrections.lookup()) and passes it in here to avoid embedding the same text
+    twice for the common short-doc case. When dv is None (long-doc windows, or direct callers)
+    this embeds exactly as before.
+
+    hint_metric_id: Feature A's "learned hint" (0.88-0.95 similarity to a past human correction).
+    Guarantees that metric is present in the returned shortlist -- injecting it in place of the
+    weakest candidate if the embedder didn't already rank it top-k -- and gives it a small boost
+    so the LLM vote actually sees and can favour it, without silently overriding the vote outright
+    the way the >=0.95 fast path does.
+    """
+    if dv is None:
+        dv = embed(doc_text[:1500])
     head_hits = _keyword_hits(doc_text[:120] + " " + filename)
     scored = []
     for i, mv in enumerate(metric_vecs):
@@ -81,7 +113,24 @@ def shortlist(doc_text, metrics, metric_vecs, filename="", k=SHORTLIST_K):
         scored.append((sim, i))
     scored.sort(reverse=True)
     top = scored[:k]
-    return [(metrics[i], round(s, 3)) for s, i in top]
+    result = [(metrics[i], round(s, 3)) for s, i in top]
+
+    if hint_metric_id:
+        ids_present = [m["id"] for m, _ in result]
+        if hint_metric_id in ids_present:
+            # already shortlisted on its own merit -- still give it the learned nudge so the
+            # vote is more likely to land on it.
+            result = [(m, round(s + LEARNED_HINT_BOOST, 3)) if m["id"] == hint_metric_id else (m, s)
+                      for m, s in result]
+        else:
+            hint_idx = next((i for i, m in enumerate(metrics) if m["id"] == hint_metric_id), None)
+            if hint_idx is not None:
+                # replace the WEAKEST candidate (last, since `result` is sorted descending) --
+                # never bump the current top pick out, so an already-confident non-learned match
+                # is not displaced by a merely-similar past correction.
+                hint_sim = round(_cos(dv, metric_vecs[hint_idx]) + LEARNED_HINT_BOOST, 3)
+                result[-1] = (metrics[hint_idx], hint_sim)
+    return result
 
 
 PROMPT = """You match a college document to ONE accreditation metric, or NONE if it truly fits none.
@@ -162,11 +211,16 @@ def _single_run(doc_text, cands, letters, temperature):
     return ch, conf, ev, title
 
 
-def _classify_window(doc_text, metrics, metric_vecs, filename):
+def _classify_window(doc_text, metrics, metric_vecs, filename, dv=None, hint_metric_id=None):
     """Run the full shortlist -> 2-vote (+ tiebreaker on disagreement) adjudication for ONE text
     window. Returns the same shape as classify()'s per-window result, used both for short docs
-    (single window) and for each half of a long doc's head/middle split."""
-    cands = shortlist(doc_text, metrics, metric_vecs, filename=filename, k=SHORTLIST_K)
+    (single window) and for each half of a long doc's head/middle split.
+
+    dv/hint_metric_id: passed straight through to shortlist() -- see its docstring. classify()
+    supplies dv for the short-doc case (reusing its own doc-level embedding) and hint_metric_id
+    whenever corrections memory found a 0.88-0.95 similar past correction."""
+    cands = shortlist(doc_text, metrics, metric_vecs, filename=filename, k=SHORTLIST_K,
+                       dv=dv, hint_metric_id=hint_metric_id)
     top_sim = cands[0][1]
 
     if top_sim < SIM_FLOOR:
@@ -180,6 +234,7 @@ def _classify_window(doc_text, metrics, metric_vecs, filename):
             "reason": "low_similarity", "evidence": "", "top_sim": top_sim,
             "candidates": [m["id"] for m, _ in cands],
             "commit_level": None, "metric_uncertain": False, "title": "", "fast_path": False,
+            "learned_hint": bool(hint_metric_id),
         }
 
     letters = ["A", "B", "C", "D", "E"][:len(cands)]
@@ -332,34 +387,84 @@ def _classify_window(doc_text, metrics, metric_vecs, filename):
         "metric_uncertain": metric_uncertain,
         "title": title,
         "fast_path": fast_path,
+        "learned_hint": bool(hint_metric_id),
     }
 
 
-def classify(doc_text, metrics, metric_vecs, filename=""):
+def classify(doc_text, metrics, metric_vecs, filename="", pack_name=None):
+    """pack_name: enables Feature A (corrections memory). Optional and defaults to None so every
+    existing caller keeps working unchanged; without it classify() behaves exactly as PIPELINE_VERSION
+    3 did (minus the harmless extra doc_vec field every result now carries)."""
+    # doc-level embedding, computed ONCE here (not per-window) so it can double as: (a) the vector
+    # corrections.lookup() searches against, (b) the vector reused by shortlist() for the common
+    # short-doc case below (dv=doc_vec), and (c) result["doc_vec"] for the caller to hand back to
+    # corrections.record() later if a human corrects this doc. Long-doc windows below still embed
+    # their own (different, shorter) text slices -- that's real classification signal, not waste.
+    doc_vec = embed(doc_text[:1500])
+    rounded_vec = [round(float(x), 5) for x in doc_vec]
+
+    hint_metric_id = None
+    if pack_name and corrections is not None:
+        try:
+            entry, cos = corrections.lookup(pack_name, doc_vec)
+        except Exception:
+            # a corrupted/unreadable memory file must never break classification -- treat it as
+            # "no memory yet" (corrections.lookup() already does this internally; this is belt
+            # and braces against any other surprise, e.g. a bad monkeypatch in a test).
+            entry, cos = None, 0.0
+        if entry:
+            learned_metric = next((m for m in metrics if m["id"] == entry.get("metric_id")), None)
+            if learned_metric and cos >= LEARNED_AUTO_THRESHOLD:
+                # near-identical to a document a human already corrected/confirmed -- skip
+                # shortlist + the vote entirely (saves the LLM calls too) and trust the memory.
+                return {
+                    "chosen": learned_metric, "confidence": 0.99, "agree": True, "status": "auto",
+                    "reason": "", "evidence": "", "top_sim": round(cos, 3),
+                    "candidates": [learned_metric["id"]], "commit_level": "metric",
+                    "metric_uncertain": False, "title": "", "fast_path": False,
+                    "learned": True, "learned_hint": False, "doc_vec": rounded_vec,
+                }
+            elif learned_metric and cos >= LEARNED_HINT_THRESHOLD:
+                # similar but not identical -- don't auto-apply, just make sure the vote sees
+                # this metric as an option (see shortlist()'s hint_metric_id handling).
+                hint_metric_id = entry.get("metric_id")
+
     if len(doc_text) <= LONG_DOC_CHARS:
-        return _classify_window(doc_text, metrics, metric_vecs, filename)
+        result = _classify_window(doc_text, metrics, metric_vecs, filename,
+                                   dv=doc_vec, hint_metric_id=hint_metric_id)
+    else:
+        # long doc: classify on the first 900 chars and on a middle 900-char slice. If the two
+        # windows land on different metrics, the document likely covers more than one topic (or
+        # the head is boilerplate/letterhead) -- take the higher-confidence window's answer but
+        # mark the result "review" so a human double-checks instead of silently trusting one
+        # slice. Each window gets its own embedding (dv=None -> shortlist() embeds that window's
+        # own text) since head vs middle really can be about different things; only hint_metric_id
+        # (the corrections nudge, based on the whole doc's opening) is shared between them.
+        mid_start = max(0, len(doc_text) // 2 - 450)
+        head_result = _classify_window(doc_text[:900], metrics, metric_vecs, filename,
+                                        hint_metric_id=hint_metric_id)
+        mid_result = _classify_window(doc_text[mid_start:mid_start + 900], metrics, metric_vecs,
+                                       filename, hint_metric_id=hint_metric_id)
 
-    # long doc: classify on the first 900 chars and on a middle 900-char slice. If the two
-    # windows land on different metrics, the document likely covers more than one topic (or the
-    # head is boilerplate/letterhead) -- take the higher-confidence window's answer but mark the
-    # result "review" so a human double-checks instead of silently trusting one slice.
-    mid_start = max(0, len(doc_text) // 2 - 450)
-    head_result = _classify_window(doc_text[:900], metrics, metric_vecs, filename)
-    mid_result = _classify_window(doc_text[mid_start:mid_start + 900], metrics, metric_vecs, filename)
+        head_id = head_result["chosen"]["id"] if head_result["chosen"] else None
+        mid_id = mid_result["chosen"]["id"] if mid_result["chosen"] else None
 
-    head_id = head_result["chosen"]["id"] if head_result["chosen"] else None
-    mid_id = mid_result["chosen"]["id"] if mid_result["chosen"] else None
+        if head_id == mid_id:
+            result = head_result  # both windows agree -- trust the normal status/confidence
+        else:
+            winner = head_result if head_result["confidence"] >= mid_result["confidence"] else mid_result
+            result = dict(winner)
+            result["status"] = "review"
+            result["reason"] = "long_doc_window_disagreement"
+            # the window that "won" may have auto-committed (metric or criterion level) on its
+            # own, but the head/mid split disagreeing is exactly the kind of ambiguity a human
+            # should see -- don't let a stale commit_level from the winning window imply this doc
+            # auto-committed overall.
+            result["commit_level"] = None
+            result["metric_uncertain"] = False
 
-    if head_id == mid_id:
-        return head_result  # both windows agree -- trust the normal status/confidence
-
-    winner = head_result if head_result["confidence"] >= mid_result["confidence"] else mid_result
-    result = dict(winner)
-    result["status"] = "review"
-    result["reason"] = "long_doc_window_disagreement"
-    # the window that "won" may have auto-committed (metric or criterion level) on its own, but
-    # the head/mid split disagreeing is exactly the kind of ambiguity a human should see -- don't
-    # let a stale commit_level from the winning window imply this doc auto-committed overall.
-    result["commit_level"] = None
-    result["metric_uncertain"] = False
+    result = dict(result)
+    result["doc_vec"] = rounded_vec
+    result.setdefault("learned", False)
+    result.setdefault("learned_hint", False)
     return result

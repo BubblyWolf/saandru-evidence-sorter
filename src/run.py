@@ -19,6 +19,7 @@ from enrich import extract_academic_year, suggest_name
 from ollama_client import CHAT_MODEL
 import doc_cache
 from gap_report import build_gap_report, format_gap_report_text, format_summary_card_text
+from duplicates import find_duplicates, file_sha256
 from openpyxl import Workbook
 
 FOLDER = sys.argv[1] if len(sys.argv) > 1 else r"D:\praman\samples\mock"
@@ -49,6 +50,7 @@ def main():
     metric_commit_count, metric_commit_correct = 0, 0
     crit_commit_count, crit_commit_correct = 0, 0
     decisions = []  # feeds gap_report.build_gap_report() once the loop is done
+    dup_items = []  # feeds duplicates.find_duplicates() once the loop is done (Feature B)
     pack_key = _pack_hash(metrics)
     print(f"\nClassifying {len(files)} documents...\n" + "-" * 78)
     for fn in files:
@@ -77,7 +79,7 @@ def main():
             # marker text below so run.py's existing accuracy bookkeeping is unchanged.
             unreadable = text.startswith(
                 ("[UNSUPPORTED FORMAT:", "[NEEDS OCR:", "[UNREADABLE:", "[EMPTY DOCUMENT:"))
-            r = classify(text, metrics, metric_vecs, filename=fn)
+            r = classify(text, metrics, metric_vecs, filename=fn, pack_name=pack_name)
             year_info = extract_academic_year(text)
             year = year_info["year"]
             # Task 1: prefer the title piggybacked on the adjudication call (free) -- only fall
@@ -94,6 +96,15 @@ def main():
         decisions.append({
             "filename": fn, "status": r["status"], "commit_level": r.get("commit_level"),
             "chosen": r["chosen"], "unreadable": unreadable,
+        })
+        # Feature B (duplicate finder): sha256 always (cheap, works on any file including
+        # unreadable ones), but doc_vec only for docs that were actually classified -- an
+        # unreadable file's "text" is one of read_document()'s bracketed markers, and embedding
+        # THAT would make every unreadable file look "near"-identical to every other one.
+        dup_items.append({
+            "filename": fn,
+            "sha256": file_sha256(full_path),
+            "doc_vec": None if unreadable else r.get("doc_vec"),
         })
 
         c = r["chosen"]
@@ -141,6 +152,22 @@ def main():
     gap_text = format_gap_report_text(gap_report, pack_name)
     print("\n" + summary_text)
     print("\n" + gap_text)
+
+    # ---- Duplicate finder (Feature B): deterministic, embeddings + sha256 only -- no LLM. ----
+    dup_groups = find_duplicates(dup_items)
+    if dup_groups:
+        print("\nPOSSIBLE DUPLICATES")
+        print("These files look like copies -- keep one, remove the rest:")
+        for i, g in enumerate(dup_groups, start=1):
+            print(f"  Group {i} ({g['kind']}):")
+            for f in g["files"]:
+                print(f"    - {f}")
+
+    dup_ws = wb.create_sheet("Duplicates")
+    dup_ws.append(["Group #", "Kind", "File"])
+    for i, g in enumerate(dup_groups, start=1):
+        for f in g["files"]:
+            dup_ws.append([i, g["kind"], f])
 
     gap_ws = wb.create_sheet("Gap Report")
     gap_ws.append(["Criterion", "KI", "Metric", "Metric text", "Strong evidence",
