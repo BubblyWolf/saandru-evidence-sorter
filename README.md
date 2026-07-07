@@ -137,5 +137,9 @@ codebase — build on it freely under the license below.
 
 ## License
 
-[Apache License 2.0](LICENSE), copyright 2026 "Saandru contributors". If you are the one publishing this
-repository, feel free to swap that name for your own or your organisation's before making it public.
+[GNU AGPL-3.0](LICENSE), copyright 2026 "Saandru contributors". In plain words: use Saandru freely —
+including inside your college's daily work — but if you build software on top of it and give it to
+others (including as a website or hosted service), your version's source code must be shared under
+this same license. Colleges that simply USE the tool have nothing to do; this clause exists so the
+tool and everything grown from it stays open. If you are the one publishing this repository, feel
+free to swap the copyright name for your own before making it public.
