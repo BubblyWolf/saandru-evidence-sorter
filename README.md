@@ -5,7 +5,7 @@ organise their accreditation evidence. Point it at a messy folder of documents; 
 matches it to the right accreditation criterion/metric, builds an evidence index (Excel) and a gap
 report (PDF), and flags anything it is unsure about for a human to check.
 
-*Formerly prototyped under the working name Praman.*
+*Built by **Chitranjan Jegadeesan**. Formerly prototyped under the working name Praman.*
 
 **Your documents never leave your computer. No cloud, no API keys, no internet connection needed once
 the model is downloaded.**
@@ -137,9 +137,8 @@ codebase — build on it freely under the license below.
 
 ## License
 
-[GNU AGPL-3.0](LICENSE), copyright 2026 "Saandru contributors". In plain words: use Saandru freely —
+[GNU AGPL-3.0](LICENSE), copyright 2026 Chitranjan Jegadeesan. In plain words: use Saandru freely —
 including inside your college's daily work — but if you build software on top of it and give it to
 others (including as a website or hosted service), your version's source code must be shared under
 this same license. Colleges that simply USE the tool have nothing to do; this clause exists so the
-tool and everything grown from it stays open. If you are the one publishing this repository, feel
-free to swap the copyright name for your own before making it public.
+tool and everything grown from it stays open.

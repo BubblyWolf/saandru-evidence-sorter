@@ -3,6 +3,8 @@ Saandru -- Accreditation Evidence Sorter
 Single-file Streamlit UI for non-technical college office staff.
 
 Everything runs locally. Nothing is uploaded anywhere.
+
+Author: Chitranjan Jegadeesan
 """
 import os
 import io
@@ -854,3 +856,7 @@ if st.session_state.run_done:
 
 else:
     st.caption("Fill in Step 1 and Step 2 above, then press ▶️ Start sorting.")
+
+# ---- signature footer (shown on every screen state) ----
+st.divider()
+st.caption("Saandru (சான்று) — built by **Chitranjan Jegadeesan** · runs fully on your computer")

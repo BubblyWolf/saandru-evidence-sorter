@@ -152,6 +152,10 @@ def write_gap_report_pdf(report_dict, pack_name, out_path, college_name=""):
         c.drawString(margin, y, T(f"Accreditation pack: {pack_name}"))
         y -= 13
         c.drawString(margin, y, T(f"Generated: {_now_str()}"))
+        y -= 13
+        # signature line -- this PDF travels to principals/IQAC desks; the author's name on
+        # it is the tool's calling card during college visits.
+        c.drawString(margin, y, T("Built by Chitranjan Jegadeesan"))
         y -= 10
         c.setStrokeColor(colors.HexColor("#cccccc"))
         c.line(margin, y, page_w - margin, y)
@@ -341,7 +345,8 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
 <div class="meta">
   {college_line}
   Accreditation pack: <b>{pack_name}</b><br>
-  Generated: {generated}
+  Generated: {generated}<br>
+  Built by <b>Chitranjan Jegadeesan</b>
 </div>
 
 <div class="summary">
