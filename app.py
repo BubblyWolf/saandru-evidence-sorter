@@ -22,6 +22,7 @@ from ingest import read_document       # noqa: E402
 from discover import discover_files    # noqa: E402
 from organize import organize          # noqa: E402
 from enrich import extract_academic_year, suggest_name  # noqa: E402
+from gap_report import build_gap_report, format_gap_report_text, format_summary_card_text  # noqa: E402
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CRITERIA_DIR = os.path.join(BASE_DIR, "criteria")
@@ -254,6 +255,9 @@ if start_clicked:
                 record.update({
                     "confidence": result["confidence"],
                     "engine_status": result["status"],   # "auto" or "review" from the model
+                    # metric-vs-criterion commit granularity: the gap report needs it to
+                    # count strong vs tentative evidence honestly (None = engine unsure).
+                    "commit_level": result.get("commit_level"),
                     "evidence": result["evidence"],
                     "candidates": result["candidates"],
                     "doc_preview": text[:400],
@@ -402,6 +406,9 @@ if st.session_state.run_done:
             if accept_clicked:
                 r["decided_by"] = "human"
                 r["status"] = "auto"
+                # a human looked at the doc and confirmed the metric -- that's the
+                # strongest evidence there is; upgrade whatever the engine's level was.
+                r["commit_level"] = "metric"
                 suggestion_txt = f"{c['id']} ({c['criterion_name']})" if c else "no confident match"
                 _log(r["file"], suggestion_txt, r.get("confidence", 0), "accepted")
                 st.rerun()
@@ -421,6 +428,8 @@ if st.session_state.run_done:
                         r["decided_by"] = "human"
                         r["status"] = "auto"
                         r["confidence"] = 1.0
+                        # human hand-picked the metric -- strongest evidence, same as Accept.
+                        r["commit_level"] = "metric"
                         _log(r["file"], f"{new_metric['id']} ({new_metric['criterion_name']})", 1.0, "changed by human")
                     st.rerun()
 
@@ -438,6 +447,78 @@ if st.session_state.run_done:
         else:
             for r in unreadable_docs:
                 st.write(f"**{r['file']}** — {r['reason']}")
+
+    st.divider()
+
+    # ---- Coverage & Gaps (deterministic, no LLM -- pure counting over the decisions
+    # above, including any human Accept/Change corrections made in the review tab).
+    # Uses `results` directly (not a copy) so a correction made a moment ago in the
+    # 🟡 tab is already reflected here -- that is the whole point of showing this
+    # AFTER the review step instead of right after the run finishes.
+    st.markdown('<div class="big-step-title">Coverage & Gaps 📊 — what evidence do we have?</div>', unsafe_allow_html=True)
+    st.caption("Counts your decisions above, including any corrections you just made.")
+
+    gap_decisions = [
+        {
+            "filename": r["file"],
+            "status": r.get("status"),
+            "chosen": r.get("chosen_metric"),
+            "unreadable": r.get("unreadable", False),
+            # thread the granularity through so tentative (criterion-only / L3
+            # blanket-trust) evidence is never displayed as strong in the UI.
+            "commit_level": r.get("commit_level"),
+        }
+        for r in results
+    ]
+    gap_report = build_gap_report(gap_decisions, metrics)
+    gap_overall = gap_report["overall"]
+
+    def _card_pct(n):
+        return f"{round(100 * n / gap_overall['docs_scanned'])}%" if gap_overall["docs_scanned"] else "0%"
+
+    tile1, tile2, tile3, tile4 = st.columns(4)
+    tile1.metric("Files looked at", gap_overall["docs_scanned"])
+    tile2.metric("Sorted automatically", gap_overall["committed"], _card_pct(gap_overall["committed"]))
+    tile3.metric("Needs your review", gap_overall["in_review"], _card_pct(gap_overall["in_review"]))
+    tile4.metric("Could not read", gap_overall["unreadable"], _card_pct(gap_overall["unreadable"]))
+
+    st.markdown("**Coverage by criterion** — how much of each criterion has strong evidence.")
+    for crit in gap_report["criteria"]:
+        cov_col, num_col = st.columns([4, 1])
+        with cov_col:
+            st.write(f"Criterion {crit['id']} — {crit['name']}")
+            st.progress(crit["coverage_pct"] / 100.0)
+        with num_col:
+            st.write(f"{crit['metrics_strong']}/{crit['total_metrics']} ({crit['coverage_pct']:.0f}%)")
+
+        missing_rows = [row for ki in crit["kis"] for row in ki["metrics"]
+                         if row["evidence_count"] == 0 and row["tentative_count"] == 0]
+        tentative_rows = [row for ki in crit["kis"] for row in ki["metrics"]
+                           if row["evidence_count"] == 0 and row["tentative_count"] > 0]
+        if missing_rows or tentative_rows:
+            with st.expander(
+                f"See gaps for Criterion {crit['id']} "
+                f"({len(missing_rows)} missing, {len(tentative_rows)} tentative)"
+            ):
+                if missing_rows:
+                    st.write("**MISSING — no evidence found yet:**")
+                    for row in missing_rows:
+                        st.write(f"- {row['id']}: {row['text'][:70]}")
+                if tentative_rows:
+                    st.write("**TENTATIVE — needs a human to confirm:**")
+                    for row in tentative_rows:
+                        st.write(f"- {row['id']}: {row['text'][:70]}")
+
+    gap_report_txt = (
+        format_summary_card_text(gap_report, st.session_state.pack_name)
+        + "\n\n" + format_gap_report_text(gap_report, st.session_state.pack_name)
+    )
+    st.download_button(
+        "⬇️  Download gap report (.txt)",
+        data=gap_report_txt.encode("utf-8"),
+        file_name="gap_report.txt",
+        mime="text/plain",
+    )
 
     st.divider()
 

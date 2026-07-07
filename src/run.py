@@ -18,6 +18,7 @@ from pipeline import embed_metrics, classify, _pack_hash
 from enrich import extract_academic_year, suggest_name
 from ollama_client import CHAT_MODEL
 import doc_cache
+from gap_report import build_gap_report, format_gap_report_text, format_summary_card_text
 from openpyxl import Workbook
 
 FOLDER = sys.argv[1] if len(sys.argv) > 1 else r"D:\praman\samples\mock"
@@ -47,6 +48,7 @@ def main():
     auto_count, auto_correct_crit, review_count = 0, 0, 0
     metric_commit_count, metric_commit_correct = 0, 0
     crit_commit_count, crit_commit_correct = 0, 0
+    decisions = []  # feeds gap_report.build_gap_report() once the loop is done
     pack_key = _pack_hash(metrics)
     print(f"\nClassifying {len(files)} documents...\n" + "-" * 78)
     for fn in files:
@@ -63,9 +65,18 @@ def main():
             r = cached["result"]
             year = cached["year"]
             suggested_name = cached["title"]
+            # older cache entries (written before the gap report existed) won't have this
+            # key -- default to "readable" rather than guessing wrong in either direction.
+            unreadable = cached.get("unreadable", False)
             cached_tag = " [cached]"
         else:
             text = read_document(full_path)
+            # gap_report needs to know "could not read" separately from "low-confidence
+            # match" -- read_document() marks that with one of its bracketed prefixes
+            # (see ingest.py's _KNOWN_MARKER_PREFIXES); classify() still runs on the
+            # marker text below so run.py's existing accuracy bookkeeping is unchanged.
+            unreadable = text.startswith(
+                ("[UNSUPPORTED FORMAT:", "[NEEDS OCR:", "[UNREADABLE:", "[EMPTY DOCUMENT:"))
             r = classify(text, metrics, metric_vecs, filename=fn)
             year_info = extract_academic_year(text)
             year = year_info["year"]
@@ -76,7 +87,14 @@ def main():
             suggested_name = r.get("title") or suggest_name(
                 text, criterion_name=(c0["criterion_name"] if c0 else ""),
                 metric_id=(c0["id"] if c0 else "NONE"))
-            doc_cache.put(cache_key, {"result": r, "year": year, "title": suggested_name})
+            doc_cache.put(cache_key, {
+                "result": r, "year": year, "title": suggested_name, "unreadable": unreadable,
+            })
+
+        decisions.append({
+            "filename": fn, "status": r["status"], "commit_level": r.get("commit_level"),
+            "chosen": r["chosen"], "unreadable": unreadable,
+        })
 
         c = r["chosen"]
         crit = c["criterion"] if c else "-"
@@ -116,11 +134,60 @@ def main():
         year_tag = f" yr={year}" if year else ""
         print(f"{fn[:34]:34} -> C{crit} {mid:8} conf={r['confidence']:.2f} {r['status']:6}{lvl_tag:5} {dt:4.1f}s{cached_tag}{year_tag} {flag}")
 
+    # ---- Gap report: deterministic, no LLM -- just counting what the loop above already
+    # decided against what the pack says SHOULD exist. ----
+    gap_report = build_gap_report(decisions, metrics)
+    summary_text = format_summary_card_text(gap_report, pack_name)
+    gap_text = format_gap_report_text(gap_report, pack_name)
+    print("\n" + summary_text)
+    print("\n" + gap_text)
+
+    gap_ws = wb.create_sheet("Gap Report")
+    gap_ws.append(["Criterion", "KI", "Metric", "Metric text", "Strong evidence",
+                   "Tentative", "Status"])
+    for crit in gap_report["criteria"]:
+        for ki in crit["kis"]:
+            for row in ki["metrics"]:
+                if row["evidence_count"] > 0:
+                    status = "OK"
+                elif row["tentative_count"] > 0:
+                    status = "TENTATIVE"
+                else:
+                    status = "MISSING"
+                gap_ws.append([
+                    f"{crit['id']} {crit['name']}", f"{ki['id']} {ki['name']}",
+                    row["id"], row["text"][:90], row["evidence_count"], row["tentative_count"],
+                    status,
+                ])
+
+    ov = gap_report["overall"]
+    sum_ws = wb.create_sheet("Summary")
+    sum_ws.append(["Metric", "Value"])
+    sum_ws.append(["Pack", pack_name])
+    sum_ws.append(["Docs scanned", ov["docs_scanned"]])
+    sum_ws.append(["Sorted automatically", ov["committed"]])
+    sum_ws.append(["Needs human review", ov["in_review"]])
+    sum_ws.append(["Could not read", ov["unreadable"]])
+    sum_ws.append(["Criterion-only commits (tentative)", ov["criterion_only_commits"]])
+    sum_ws.append([])
+    sum_ws.append(["Criterion", "Strong/Total", "Coverage %"])
+    for crit in gap_report["criteria"]:
+        sum_ws.append([f"{crit['id']} {crit['name']}",
+                        f"{crit['metrics_strong']}/{crit['total_metrics']}", crit["coverage_pct"]])
+
     out = os.path.join(os.path.dirname(FOLDER), "evidence_index.xlsx")
     try:
         wb.save(out); print("-" * 78 + f"\nExcel written: {out}")
     except Exception as e:
         print("Excel save failed:", e)
+
+    gap_txt_path = os.path.join(os.path.dirname(FOLDER), "gap_report.txt")
+    try:
+        with open(gap_txt_path, "w", encoding="utf-8") as f:
+            f.write(summary_text + "\n\n" + gap_text)
+        print(f"Gap report written: {gap_txt_path}")
+    except Exception as e:
+        print("Gap report save failed:", e)
 
     if scored:
         labeled = sum(1 for f in files if f in gt and gt[f]["true_criterion"] != "?")
