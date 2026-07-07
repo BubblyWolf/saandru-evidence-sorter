@@ -4,7 +4,7 @@ Single-file Streamlit UI for non-technical college office staff.
 
 Everything runs locally. Nothing is uploaded anywhere.
 
-Author: Chitranjan Jegadeesan
+Author: Chitranjan Jegadeesan (https://chitranjanjegadeesan.in/)
 """
 import os
 import io
@@ -859,4 +859,4 @@ else:
 
 # ---- signature footer (shown on every screen state) ----
 st.divider()
-st.caption("Saandru (சான்று) — built by **Chitranjan Jegadeesan** · runs fully on your computer")
+st.caption("Saandru (சான்று) — built by **[Chitranjan Jegadeesan](https://chitranjanjegadeesan.in/)** · runs fully on your computer")

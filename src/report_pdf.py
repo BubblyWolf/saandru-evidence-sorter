@@ -154,8 +154,16 @@ def write_gap_report_pdf(report_dict, pack_name, out_path, college_name=""):
         c.drawString(margin, y, T(f"Generated: {_now_str()}"))
         y -= 13
         # signature line -- this PDF travels to principals/IQAC desks; the author's name on
-        # it is the tool's calling card during college visits.
-        c.drawString(margin, y, T("Built by Chitranjan Jegadeesan"))
+        # it is the tool's calling card during college visits. linkURL makes the name
+        # clickable in PDF viewers (the rect must cover the drawn text area).
+        sig_text = "Built by Chitranjan Jegadeesan"
+        c.drawString(margin, y, T(sig_text))
+        try:
+            sig_w = c.stringWidth(T(sig_text), body_font, 10)
+            c.linkURL("https://chitranjanjegadeesan.in/",
+                      (margin, y - 2, margin + sig_w, y + 10), relative=0)
+        except Exception:
+            pass  # a link is a nicety; never let it break PDF generation
         y -= 10
         c.setStrokeColor(colors.HexColor("#cccccc"))
         c.line(margin, y, page_w - margin, y)
@@ -346,7 +354,7 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
   {college_line}
   Accreditation pack: <b>{pack_name}</b><br>
   Generated: {generated}<br>
-  Built by <b>Chitranjan Jegadeesan</b>
+  Built by <b><a href="https://chitranjanjegadeesan.in/">Chitranjan Jegadeesan</a></b>
 </div>
 
 <div class="summary">

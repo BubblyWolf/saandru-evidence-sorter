@@ -5,7 +5,7 @@ organise their accreditation evidence. Point it at a messy folder of documents; 
 matches it to the right accreditation criterion/metric, builds an evidence index (Excel) and a gap
 report (PDF), and flags anything it is unsure about for a human to check.
 
-*Built by **Chitranjan Jegadeesan**. Formerly prototyped under the working name Praman.*
+*Built by **[Chitranjan Jegadeesan](https://chitranjanjegadeesan.in/)**. Formerly prototyped under the working name Praman.*
 
 **Your documents never leave your computer. No cloud, no API keys, no internet connection needed once
 the model is downloaded.**
