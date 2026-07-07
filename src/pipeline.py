@@ -20,7 +20,7 @@ except Exception:
 # v4: corrections-memory fast path/hint injection + classify() now always returns doc_vec --
 # both are new LOGIC (a document that used to land in review can now auto-file), so old
 # cached answers (from a brain that didn't know about corrections) must not be served.
-PIPELINE_VERSION = "4"
+PIPELINE_VERSION = "5"
 
 # corrections-memory thresholds (Feature A): a remembered document doesn't have to be
 # byte-identical to fire -- nomic-embed-text similarity this high means "basically the same
@@ -391,10 +391,41 @@ def _classify_window(doc_text, metrics, metric_vecs, filename, dv=None, hint_met
     }
 
 
+def _latin_ratio(text):
+    """Of the alphabetic characters in `text`, what fraction are ASCII/Latin letters?
+    Docs with fewer than 20 letters (pure number tables, markers) count as 1.0 --
+    the gate below must only fire on genuinely non-Latin PROSE."""
+    letters = [ch for ch in text if ch.isalpha()]
+    if len(letters) < 20:
+        return 1.0
+    latin = sum(1 for ch in letters if ch.isascii())
+    return latin / len(letters)
+
+
+NON_LATIN_GATE = 0.50  # below this Latin-letter share, refuse to classify -- honest review
+
+
 def classify(doc_text, metrics, metric_vecs, filename="", pack_name=None):
     """pack_name: enables Feature A (corrections memory). Optional and defaults to None so every
     existing caller keeps working unchanged; without it classify() behaves exactly as PIPELINE_VERSION
     3 did (minus the harmless extra doc_vec field every result now carries)."""
+    # --- non-Latin-script gate (Tamil experiment, 07.07) -----------------------------------
+    # Measured fact: nomic-embed-text cannot discriminate Tamil text -- 3/3 pure-Tamil test
+    # docs were AUTO-COMMITTED at 0.81-0.97 confidence to the WRONG metric (they all cluster
+    # in embedding space). Confidently-wrong is the worst failure mode this tool can have, so
+    # for majority-non-Latin documents we refuse to classify at all: no embedding lookup (the
+    # corrections memory would false-hit across different Tamil docs for the same reason), no
+    # votes, no doc_vec stored (keeps unreliable vectors OUT of the learning memory). Even a
+    # doc with an English heading + Tamil body goes to review: the model can only read the
+    # heading and cannot verify the body says what the heading claims.
+    if _latin_ratio(doc_text[:1500]) < NON_LATIN_GATE:
+        return {
+            "chosen": None, "confidence": 0.0, "agree": False, "status": "review",
+            "reason": "non_english_text", "evidence": "", "top_sim": 0.0,
+            "candidates": [], "commit_level": None, "metric_uncertain": False,
+            "title": "", "fast_path": False, "learned": False, "learned_hint": False,
+            "doc_vec": None,
+        }
     # doc-level embedding, computed ONCE here (not per-window) so it can double as: (a) the vector
     # corrections.lookup() searches against, (b) the vector reused by shortlist() for the common
     # short-doc case below (dv=doc_vec), and (c) result["doc_vec"] for the caller to hand back to

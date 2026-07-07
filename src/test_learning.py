@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import corrections            # noqa: E402
 import pipeline                # noqa: E402
 from duplicates import find_duplicates  # noqa: E402
+import ollama_client           # noqa: E402
 
 problems = []
 
@@ -314,6 +315,60 @@ def test_find_duplicates():
     check("a single item never forms a group", find_duplicates([items[0]]) == [])
 
 
+# ---------------------------------------------------------------------------
+# Task B: hardware auto-tiering (ollama_client._choose_chat_model)
+# ---------------------------------------------------------------------------
+def test_chat_model_tiering():
+    print("\n== ollama_client._choose_chat_model(): hardware auto-tiering ==")
+    HIGH, LOW = ollama_client._HIGH_RAM_MODEL, ollama_client._LOW_RAM_MODEL
+
+    real_env = os.environ.pop("PRAMAN_MODEL", None)
+    try:
+        # high-RAM machine, both models installed -> default 3b, unchanged.
+        model, reason = ollama_client._choose_chat_model(ram_gb=16, installed=[HIGH, LOW])
+        check("high-RAM -> default 3b model", model == HIGH, model)
+        check("high-RAM reason mentions RAM", "RAM" in reason, reason)
+
+        # low-RAM machine, both installed -> prefers the 1.5b tier.
+        model, reason = ollama_client._choose_chat_model(ram_gb=8, installed=[HIGH, LOW])
+        check("low-RAM -> prefers 1.5b model", model == LOW, model)
+        check("low-RAM reason mentions low-RAM tier", "low-RAM" in reason, reason)
+
+        # low-RAM machine, but 1.5b was never pulled -> falls back to the installed 3b
+        # rather than requesting a model Ollama doesn't have.
+        model, reason = ollama_client._choose_chat_model(ram_gb=8, installed=[HIGH])
+        check("low-RAM + 1.5b not installed -> falls back to installed 3b", model == HIGH, model)
+        check("fallback reason says so", "fallback" in reason and HIGH in reason, reason)
+
+        # high-RAM machine, but 3b was never pulled and only 1.5b is -> falls back the
+        # other direction too (reconciliation is symmetric).
+        model, reason = ollama_client._choose_chat_model(ram_gb=16, installed=[LOW])
+        check("high-RAM + 3b not installed -> falls back to installed 1.5b", model == LOW, model)
+
+        # neither tier installed / Ollama unreachable -> keep the RAM-preferred name as-is
+        # (no crash, no guessing a third model).
+        model, reason = ollama_client._choose_chat_model(ram_gb=16, installed=[])
+        check("nothing installed -> keeps RAM-preferred name (no crash)", model == HIGH, model)
+
+        # env override wins over everything, even a low-RAM machine with nothing installed.
+        os.environ["PRAMAN_MODEL"] = "custom-model:latest"
+        model, reason = ollama_client._choose_chat_model(ram_gb=4, installed=[])
+        check("env override wins over RAM tier", model == "custom-model:latest", model)
+        check("env override reason says so", reason == "env override", reason)
+    finally:
+        os.environ.pop("PRAMAN_MODEL", None)
+        if real_env is not None:
+            os.environ["PRAMAN_MODEL"] = real_env
+
+    # live check: on THIS machine (16GB RAM, qwen2.5:3b-instruct installed), the module-level
+    # CHAT_MODEL computed at import time must land on the unchanged default -- the doc cache
+    # keys include CHAT_MODEL, so an unintended change here would invalidate every cache entry.
+    print(f"  live CHAT_MODEL on this machine = {ollama_client.CHAT_MODEL!r} "
+          f"({ollama_client.CHAT_MODEL_REASON})")
+    check("live CHAT_MODEL on this machine == 'qwen2.5:3b-instruct'",
+          ollama_client.CHAT_MODEL == "qwen2.5:3b-instruct", ollama_client.CHAT_MODEL)
+
+
 def main():
     test_corrections_roundtrip()
     test_corrections_fifo_cap()
@@ -322,6 +377,7 @@ def main():
     test_classify_learned_hint()
     test_classify_no_false_learned_hit()
     test_find_duplicates()
+    test_chat_model_tiering()
 
     # clean up test artifacts
     for p in ["_test_corrections.json", "_test_corrections_fifo.json", "_test_corrections_corrupt.json"]:

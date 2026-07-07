@@ -8,13 +8,22 @@ one per accreditation criterion, inside a "Praman_Sorted" folder next to the ori
 Hard rules:
   - COPY only (shutil.copy2). Never move, never delete, never overwrite an original.
   - Never overwrite an existing file inside Praman_Sorted either -- collisions get a
-    _2, _3, ... suffix.
+    _2, _3, ... suffix UNLESS the existing file is byte-identical, in which case the
+    copy is skipped (re-running the same folder must not pile up duplicate copies).
   - One bad file must never stop the whole batch: every copy is wrapped so a single
     failure is recorded in "errors" and the loop continues.
+  - Every copy is recorded in "_manifest.json" (sha256 of the copied bytes + where it
+    came from) so verify_sorted.py can later detect hand-edits/moves/deletions.
 """
+import datetime
+import json
 import os
 import re
 import shutil
+
+from duplicates import file_sha256  # reuse the same sha256-file-bytes pattern everywhere
+
+MANIFEST_FILENAME = "_manifest.json"
 
 SORTED_DIRNAME = "Praman_Sorted"
 NEEDS_REVIEW_DIRNAME = "_NEEDS_REVIEW"
@@ -70,16 +79,30 @@ def sanitize_folder_name(name, fallback="Unnamed"):
     return name[:80]
 
 
-def _unique_dest_path(dest_dir, filename):
-    """Return a destination path inside dest_dir that does not already exist,
-    suffixing _2, _3, ... on the filename stem before the extension if needed."""
+def _resolve_collision(dest_dir, filename, src_hash):
+    """Return (dest_path, should_copy) for a destination inside dest_dir.
+
+    Never overwrites an existing file. But a name collision no longer always means
+    "different file, suffix it" -- faculty re-running Praman on a folder they already
+    sorted used to pile up "_2", "_3" copies of the SAME document every time. So:
+      - if a file already sits at the candidate path with IDENTICAL bytes (sha256
+        match) -> this is the same document already sorted; skip the copy and return
+        the existing path (should_copy=False).
+      - if it exists with DIFFERENT bytes -> genuinely a different file that happens
+        to want the same name; suffix _2, _3, ... until a free (or byte-identical)
+        slot is found.
+    src_hash may be None (source file unreadable for hashing) -- treated as "always
+    different", so collisions always suffix rather than risk a false-positive skip.
+    """
     base, ext = os.path.splitext(filename)
     candidate = os.path.join(dest_dir, filename)
     n = 2
     while os.path.exists(candidate):
+        if src_hash is not None and file_sha256(candidate) == src_hash:
+            return candidate, False  # byte-identical -- already sorted here, skip
         candidate = os.path.join(dest_dir, f"{base}_{n}{ext}")
         n += 1
-    return candidate
+    return candidate, True
 
 
 def _criterion_folder_name(criterion):
@@ -159,7 +182,7 @@ def _needs_review(decision):
     return False
 
 
-def organize(decisions, source_folder, oversight_level=None):
+def organize(decisions, source_folder, oversight_level=None, pack_name=None):
     """Copy every document referenced in `decisions` into Praman_Sorted subfolders.
 
     decisions: list of dicts, each describing one processed file. Recognised keys
@@ -187,8 +210,14 @@ def organize(decisions, source_folder, oversight_level=None):
         logging; organize() itself just files what `decisions` says to file (the
         caller is responsible for only calling this once the right decisions are
         final for the chosen level).
+    pack_name: optional metric-pack name/label, recorded in _manifest.json purely
+        for a human reading the manifest later ("what was this folder sorted with").
 
-    Returns: {"copied": int, "skipped": int, "errors": [str, ...], "sorted_dir": str}
+    Returns: {"copied": int, "already_there": int, "skipped": int, "errors": [str, ...],
+              "sorted_dir": str}
+      - "copied": files actually copied this run.
+      - "already_there": collisions that were skipped because the file at that
+        destination already had identical bytes (re-running an already-sorted folder).
     """
     if not source_folder or not os.path.isdir(source_folder):
         raise ValueError(f"source_folder does not exist: {source_folder!r}")
@@ -207,7 +236,8 @@ def organize(decisions, source_folder, oversight_level=None):
     except OSError:
         pass  # non-fatal -- the copy job itself is what matters
 
-    summary = {"copied": 0, "skipped": 0, "errors": [], "sorted_dir": sorted_dir}
+    summary = {"copied": 0, "already_there": 0, "skipped": 0, "errors": [], "sorted_dir": sorted_dir}
+    manifest_files = []  # one entry per file that ended up on disk (copied OR already there)
 
     for decision in decisions or []:
         filename = decision.get("filename") or decision.get("file")
@@ -223,13 +253,13 @@ def organize(decisions, source_folder, oversight_level=None):
             continue
 
         # pick destination folder
+        criterion = decision.get("criterion")  # may be None for review/unreadable buckets too
         try:
             if _looks_unreadable(decision):
                 dest_dir = unread_dir
             elif _needs_review(decision):
                 dest_dir = review_dir
             else:
-                criterion = decision.get("criterion")
                 if not criterion:
                     dest_dir = review_dir  # no criterion committed -> treat as needs review
                 else:
@@ -238,12 +268,37 @@ def organize(decisions, source_folder, oversight_level=None):
                     os.makedirs(dest_dir, exist_ok=True)
 
             dest_filename = _dest_filename(decision, os.path.basename(filename))
-            dest_path = _unique_dest_path(dest_dir, dest_filename)
-            shutil.copy2(src_path, dest_path)
-            summary["copied"] += 1
+            src_hash = file_sha256(src_path)
+            dest_path, should_copy = _resolve_collision(dest_dir, dest_filename, src_hash)
+            if should_copy:
+                shutil.copy2(src_path, dest_path)
+                summary["copied"] += 1
+            else:
+                summary["already_there"] += 1
+
+            manifest_files.append({
+                "relpath": os.path.relpath(dest_path, sorted_dir).replace(os.sep, "/"),
+                "sha256": src_hash or "",
+                "source": filename,
+                "metric": str(decision.get("metric") or ""),
+                "criterion": str(criterion.get("id")) if criterion else "",
+            })
         except Exception as exc:  # noqa: BLE001 -- one bad file must never kill the batch
             summary["skipped"] += 1
             summary["errors"].append(f"{filename}: {exc}")
+
+    # _manifest.json: the tamper-evident record verify_sorted.py checks the folder against
+    # later. Written even on a re-run (overwrites) so it always reflects the current state.
+    manifest = {
+        "created": datetime.datetime.now().isoformat(timespec="seconds"),
+        "pack": pack_name or "",
+        "files": manifest_files,
+    }
+    try:
+        with open(os.path.join(sorted_dir, MANIFEST_FILENAME), "w", encoding="utf-8") as f:
+            json.dump(manifest, f, indent=2, ensure_ascii=False)
+    except OSError as exc:
+        summary["errors"].append(f"_manifest.json could not be written: {exc}")
 
     return summary
 
@@ -361,7 +416,7 @@ if __name__ == "__main__":
         },
     ]
 
-    result = organize(decisions, tmp_root, oversight_level="L2")
+    result = organize(decisions, tmp_root, oversight_level="L2", pack_name="SelfTestPack")
     print("Summary:", result)
 
     # --- verify -------------------------------------------------------------------
@@ -456,6 +511,102 @@ if __name__ == "__main__":
         problems.append("ORIGINAL MISSING: dupsource/report.txt")
     if not os.path.isfile(os.path.join(tmp_root, "report.txt")):
         problems.append("ORIGINAL MISSING: report.txt")
+
+    # --- Task A: manifest was written, and it matches this run --------------------
+    manifest_path = os.path.join(sorted_dir, MANIFEST_FILENAME)
+    if not os.path.isfile(manifest_path):
+        problems.append("_manifest.json missing")
+    else:
+        with open(manifest_path, encoding="utf-8") as f:
+            manifest = json.load(f)
+        if manifest.get("pack") != "SelfTestPack":
+            problems.append(f"manifest 'pack' mismatch, got {manifest.get('pack')!r}")
+        if len(manifest.get("files", [])) != result["copied"]:
+            problems.append(
+                f"manifest file count ({len(manifest.get('files', []))}) != "
+                f"this run's copied count ({result['copied']})"
+            )
+
+    # --- Task A: re-run-skip -- organizing the SAME folder twice must not pile up
+    # "_2"/"_3" copies of files whose bytes have not changed. -------------------------
+    def _snapshot_relpaths():
+        found = set()
+        for root, _dirnames, filenames in os.walk(sorted_dir):
+            for name in filenames:
+                found.add(os.path.relpath(os.path.join(root, name), sorted_dir))
+        return found
+
+    before_rerun = _snapshot_relpaths()
+    result_rerun = organize(decisions, tmp_root, oversight_level="L2", pack_name="SelfTestPack")
+    after_rerun = _snapshot_relpaths()
+    print("Re-run summary:", result_rerun)
+
+    if result_rerun["copied"] != 0:
+        problems.append(f"re-run: expected 0 NEW copies (all identical), got {result_rerun['copied']}")
+    if result_rerun.get("already_there") != result["copied"]:
+        problems.append(
+            f"re-run: expected already_there == first run's copied ({result['copied']}), "
+            f"got {result_rerun.get('already_there')}"
+        )
+    if before_rerun != after_rerun:
+        problems.append(
+            "re-run created/removed files on disk (re-run-skip is broken): "
+            f"new={after_rerun - before_rerun} gone={before_rerun - after_rerun}"
+        )
+
+    # --- Task A: verify_sorted.py -- tamper by hand, then confirm all 4 categories --------
+    import verify_sorted  # local import: only this self-test section needs it
+
+    changed_target = os.path.join(crit_dir, "_YEAR_UNKNOWN", "1.1.1.txt")
+    moved_from = os.path.join(support_dir, "AY_2023-24", "5.1.1_Scholarship_Beneficiary_List_2023-24.txt")
+    moved_to = os.path.join(crit_dir, "_YEAR_UNKNOWN", "5.1.1_Scholarship_Beneficiary_List_2023-24.txt")
+    missing_target = os.path.join(unread_dir_path, "corrupt.pdf")
+    extra_target = os.path.join(sorted_dir, "_dropped_in_by_hand.txt")
+
+    with open(changed_target, "a", encoding="utf-8") as f:
+        f.write(" -- edited by hand after sorting")
+    shutil.move(moved_from, moved_to)
+    os.remove(missing_target)
+    with open(extra_target, "w", encoding="utf-8") as f:
+        f.write("nobody sorted this")
+
+    verify_result = verify_sorted.verify(sorted_dir)
+    print("\nVerify report:\n" + verify_sorted.format_verify_text(verify_result))
+
+    if len(verify_result["changed"]) != 1:
+        problems.append(f"verify: expected 1 CHANGED, got {len(verify_result['changed'])}")
+    if len(verify_result["moved"]) != 1:
+        problems.append(f"verify: expected 1 MOVED, got {len(verify_result['moved'])}")
+    if len(verify_result["missing"]) != 1:
+        problems.append(f"verify: expected 1 MISSING, got {len(verify_result['missing'])}")
+    if len(verify_result["extra"]) != 1:
+        problems.append(f"verify: expected 1 EXTRA, got {len(verify_result['extra'])}")
+    if verify_result["ok"]:
+        problems.append("verify: expected ok=False after tampering, got True")
+
+    # a clean, untampered folder must report ok=True -- sanity-check on a fresh source
+    clean_root = tempfile.mkdtemp(prefix="praman_organize_clean_test_")
+    with open(os.path.join(clean_root, "a.txt"), "w", encoding="utf-8") as f:
+        f.write("clean file")
+    clean_decisions = [{
+        "filename": "a.txt",
+        "criterion": {"id": "1.1", "name": "Curriculum"},
+        "metric": "1.1.1",
+        "status": "auto",
+        "decided_by": "auto",
+    }]
+    clean_result = organize(clean_decisions, clean_root, oversight_level="L2", pack_name="CleanTest")
+    clean_verify = verify_sorted.verify(clean_result["sorted_dir"])
+    if not clean_verify["ok"]:
+        problems.append(f"verify: expected ok=True on an untampered folder, got {clean_verify}")
+    shutil.rmtree(clean_root, ignore_errors=True)
+
+    # missing-manifest case must not crash, and must say so clearly
+    no_manifest_result = verify_sorted.verify(dup_dir)  # a real folder with no _manifest.json
+    if no_manifest_result["manifest_found"]:
+        problems.append("verify: expected manifest_found=False on a folder with no manifest")
+    if "run sorting again" not in no_manifest_result.get("message", ""):
+        problems.append(f"verify: missing-manifest message not clear: {no_manifest_result.get('message')!r}")
 
     print()
     if problems:

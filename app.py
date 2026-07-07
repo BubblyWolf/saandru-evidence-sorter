@@ -18,9 +18,11 @@ from openpyxl import Workbook
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 from pack import load_metrics          # noqa: E402
 from pipeline import embed_metrics, classify  # noqa: E402
+from ollama_client import CHAT_MODEL, CHAT_MODEL_REASON  # noqa: E402
 from ingest import read_document       # noqa: E402
 from discover import discover_files    # noqa: E402
 from organize import organize          # noqa: E402
+from verify_sorted import verify, format_verify_text  # noqa: E402
 from enrich import extract_academic_year, suggest_name  # noqa: E402
 from gap_report import build_gap_report, format_gap_report_text, format_summary_card_text  # noqa: E402
 import corrections                     # noqa: E402  -- Feature A: learn from human corrections
@@ -180,6 +182,7 @@ st.divider()
 # STEP 3 -- run
 # --------------------------------------------------------------------------
 st.markdown('<div class="big-step-title">Step 3 ▶️ — Start sorting</div>', unsafe_allow_html=True)
+st.caption(f"Reading model on this PC: {CHAT_MODEL} ({CHAT_MODEL_REASON})")
 
 start_col, _ = st.columns([1, 3])
 with start_col:
@@ -668,10 +671,11 @@ if st.session_state.run_done:
             })
 
         with st.spinner("Copying files into Praman_Sorted..."):
-            summary = organize(decisions, folder_path, oversight_level)
+            summary = organize(decisions, folder_path, oversight_level, pack_name=st.session_state.pack_name)
 
         st.success(
-            f"Copied {summary['copied']} file(s) into folders. "
+            f"Copied {summary['copied']} file(s) into folders "
+            f"({summary.get('already_there', 0)} already there, unchanged). "
             f"{len(summary['errors'])} problem(s)."
         )
         st.write(f"**Folders were created here:** `{summary['sorted_dir']}`")
@@ -681,6 +685,29 @@ if st.session_state.run_done:
             with st.expander(f"⚠️ {len(summary['errors'])} file(s) had a problem"):
                 for err in summary["errors"]:
                     st.write(f"- {err}")
+
+        st.session_state.last_sorted_dir = summary["sorted_dir"]
+
+    # ---- Tamper check ----
+    # Only shows once a Praman_Sorted folder exists for this source folder (either just
+    # organized above, or from an earlier run) -- checks it against its own _manifest.json.
+    default_sorted_dir = os.path.join(folder_path, "Praman_Sorted") if folder_path else None
+    check_target = st.session_state.get("last_sorted_dir") or default_sorted_dir
+    if check_target and os.path.isdir(check_target):
+        if st.button("🛡 Check my folder", use_container_width=False):
+            with st.spinner("Comparing the folder against its manifest..."):
+                verify_result = verify(check_target)
+            if not verify_result.get("manifest_found"):
+                st.warning(verify_result.get("message", "Could not check this folder."))
+            elif verify_result["ok"]:
+                st.success("Folder matches the record ✔ -- nothing was changed, moved, or deleted by hand.")
+            else:
+                total_issues = (
+                    len(verify_result["changed"]) + len(verify_result["moved"])
+                    + len(verify_result["missing"]) + len(verify_result["extra"])
+                )
+                st.warning(f"{total_issues} issue(s) found -- see below.")
+                st.text(format_verify_text(verify_result))
 
 else:
     st.caption("Fill in Step 1 and Step 2 above, then press Start sorting.")
