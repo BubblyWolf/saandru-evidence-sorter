@@ -101,5 +101,35 @@ def lookup(pack_name, doc_vec):
     return best_entry, best_cos
 
 
+def learned_override(pack_name, doc_vec, metrics):
+    """Cheap, LLM-free twin of classify()'s learned-auto fast path (see pipeline.py's
+    LEARNED_AUTO_THRESHOLD block) -- for use on a doc_cache HIT, where doc_vec is already known
+    and re-embedding/re-voting the document would throw away the whole point of caching.
+
+    Returns (learned_metric_dict, cos) when lookup() finds a past human correction with
+    cos >= LEARNED_AUTO_THRESHOLD AND that metric id still exists in the CURRENT `metrics` list
+    (a pack can be edited/re-versioned between runs, so the id a human corrected to may no
+    longer be in it); otherwise (None, cos_or_0.0) so the caller keeps the cached answer as-is.
+
+    Import of LEARNED_AUTO_THRESHOLD is done lazily inside the function body (not at module
+    load) to avoid a circular import: pipeline.py already imports this module at load time.
+
+    Never raises -- same defensive contract as lookup()/record() above: a corrupt memory file
+    or an unexpected shape must degrade to "no override", not crash a cache-hit render.
+    """
+    try:
+        from pipeline import LEARNED_AUTO_THRESHOLD
+        entry, cos = lookup(pack_name, doc_vec)
+    except Exception:
+        return None, 0.0
+    if not entry or cos < LEARNED_AUTO_THRESHOLD:
+        return None, cos
+    learned_metric = next((m for m in metrics if m["id"] == entry.get("metric_id")), None)
+    if not learned_metric:
+        # the corrected-to metric id no longer exists in this pack version -- nothing to apply
+        return None, cos
+    return learned_metric, cos
+
+
 if __name__ == "__main__":
     print("corrections self-test: empty lookup ->", lookup("no-such-pack", [1.0, 0.0, 0.0]))

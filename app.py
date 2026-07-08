@@ -19,7 +19,7 @@ from openpyxl import Workbook
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 from pack import load_metrics          # noqa: E402
-from pipeline import embed_metrics, classify  # noqa: E402
+from pipeline import embed_metrics, classify, _pack_hash  # noqa: E402
 from ollama_client import CHAT_MODEL, CHAT_MODEL_REASON  # noqa: E402
 from ingest import read_document       # noqa: E402
 from discover import discover_files    # noqa: E402
@@ -29,6 +29,7 @@ from enrich import extract_academic_year, suggest_name  # noqa: E402
 from gap_report import build_gap_report, format_gap_report_text, format_summary_card_text, _shorten  # noqa: E402
 import corrections                     # noqa: E402  -- Feature A: learn from human corrections
 from duplicates import find_duplicates, file_sha256  # noqa: E402  -- Feature B: duplicate finder
+import doc_cache                       # noqa: E402  -- per-document cache: skip read/classify on an unchanged file
 from report_pdf import render_gap_report_pdf_bytes, render_gap_report_html_str  # noqa: E402 -- Task 1: PDF/HTML reports.
 # Issue 1 fix: app.py only ever uses the in-memory bytes/string renderers above -- never
 # the disk-writing write_gap_report_pdf()/write_gap_report_html() (those stay run.py-only,
@@ -339,15 +340,14 @@ if start_clicked:
             st.session_state.pack_name = pack_name
 
             total = len(files)
+            # Cache wiring: mirrors run.py's WORKING pattern (src/run.py ~55-95) -- cache key =
+            # sha256(file bytes + pack hash + model name + PIPELINE_VERSION), so an unchanged
+            # file against the same pack/model always hits and an edited file (even if the
+            # extracted text happens to come out the same) always misses. Computed once per run.
+            pack_key = _pack_hash(metrics)
             for i, fn in enumerate(files, start=1):
                 status_text.text(_progress_message(i, total, time.time() - run_start_time))
                 full_path = os.path.join(folder_path, fn)
-                try:
-                    text = read_document(full_path)
-                except Exception as e:
-                    # A single bad/locked file must never stop the whole batch --
-                    # treat it like any other unreadable file and keep going.
-                    text = f"[UNREADABLE: {e}]"
 
                 record = {
                     "file": fn,
@@ -356,84 +356,192 @@ if start_clicked:
                     "reason": "",
                 }
 
-                if text.startswith("[UNREADABLE:") or text.startswith("[UNSUPPORTED FORMAT:"):
-                    record["unreadable"] = True
-                    inner = text.strip("[]")
-                    if inner.startswith("UNREADABLE:"):
-                        reason = "The file could not be opened. Details: " + inner.split(":", 1)[1].strip()
-                    else:
-                        reason = "This file type is not supported yet."
-                    record["reason"] = reason
-                    record["status"] = "unreadable"
-                    # sha256 still works on an unreadable file (it's a hash of raw bytes, no
-                    # parsing needed) -- two unreadable copies of the same bad file should still
-                    # show up as an exact duplicate. No doc_vec though: nothing was classified.
+                cache_key = doc_cache.make_key(full_path, pack_key, CHAT_MODEL)
+                cached = doc_cache.get(cache_key)
+
+                if cached is not None:
+                    # ---- cache HIT: skip read_document/classify/extract_academic_year/
+                    # suggest_name entirely. Oversight bucketing (L1/L2/L3 -> status/decided_by,
+                    # the shared tail below) is deliberately NEVER cached -- it must be applied
+                    # fresh on every run, cache hit or not, because the same file at L1 vs L3
+                    # buckets differently even from an identical cached classification. ----
+                    if cached.get("unreadable"):
+                        record["unreadable"] = True
+                        record["reason"] = cached.get("reason", "")
+                        record["status"] = "unreadable"
+                        record["sha256"] = cached.get("sha256")
+                        record["doc_vec"] = None
+                        st.session_state.results.append(record)
+                        _log(fn, "-", 0.0, "could not read")
+                        progress_bar.progress(i / total)
+                        continue
+
+                    chosen = cached.get("chosen_metric")
+                    doc_vec = cached.get("doc_vec")
+                    engine_status = cached.get("engine_status")
+                    confidence = cached.get("confidence")
+                    commit_level = cached.get("commit_level")
+                    learned = cached.get("learned", False)
+
+                    # Corrections are cheap on a hit (no LLM, no re-embedding -- the doc_vec is
+                    # already known) and must still be honored: a human may have corrected this
+                    # exact metric in the review tab AFTER the file was first cached, and a later
+                    # run of the same unchanged file should reflect that correction. This mirrors
+                    # classify()'s own >=0.95 learned-auto path in pipeline.py, without the LLM
+                    # call or re-embedding. The 0.88-0.95 "hint" band is intentionally skipped here
+                    # -- those docs already had a confident cached answer; re-running the vote just
+                    # to apply a soft nudge would defeat the point of caching.
+                    learned_metric, _cos = corrections.learned_override(pack_name, doc_vec, metrics)
+                    if learned_metric is not None:
+                        chosen = learned_metric
+                        commit_level = "metric"
+                        confidence = 0.99
+                        learned = True
+                        # classify()'s own learned-auto path always returns status="auto" too
+                        # (see pipeline.py) -- match that here so the L2 oversight bucket below
+                        # (which branches on engine_status) treats a learned override the same
+                        # way a fresh classify() call would, instead of leaving a stale "review"
+                        # from before the correction existed.
+                        engine_status = "auto"
+
+                    record.update({
+                        "confidence": confidence,
+                        "engine_status": engine_status,
+                        "commit_level": commit_level,
+                        "evidence": cached.get("evidence"),
+                        "candidates": cached.get("candidates"),
+                        "doc_preview": cached.get("doc_preview"),
+                        "chosen_metric": chosen,
+                        "year": cached.get("year"),
+                        "year_confidence": cached.get("year_confidence"),
+                        "suggested_name": cached.get("suggested_name"),
+                        "doc_vec": doc_vec,
+                        "learned": learned,
+                        "sha256": cached.get("sha256"),
+                    })
+
+                else:
+                    # ---- cache MISS: the original read -> classify -> enrich path, unchanged,
+                    # plus a doc_cache.put() at the end so the NEXT run of this unchanged file
+                    # takes the fast path above instead. ----
                     try:
-                        record["sha256"] = file_sha256(full_path)
-                    except Exception:
-                        record["sha256"] = None
-                    record["doc_vec"] = None
-                    st.session_state.results.append(record)
-                    _log(fn, "-", 0.0, "could not read")
-                    progress_bar.progress(i / total)
-                    continue
+                        text = read_document(full_path)
+                    except Exception as e:
+                        # A single bad/locked file must never stop the whole batch --
+                        # treat it like any other unreadable file and keep going.
+                        text = f"[UNREADABLE: {e}]"
 
-                try:
-                    result = classify(text, metrics, metric_vecs, pack_name=pack_name)
-                    chosen = result["chosen"]
+                    if text.startswith("[UNREADABLE:") or text.startswith("[UNSUPPORTED FORMAT:"):
+                        record["unreadable"] = True
+                        inner = text.strip("[]")
+                        if inner.startswith("UNREADABLE:"):
+                            reason = "The file could not be opened. Details: " + inner.split(":", 1)[1].strip()
+                        else:
+                            reason = "This file type is not supported yet."
+                        record["reason"] = reason
+                        record["status"] = "unreadable"
+                        # sha256 still works on an unreadable file (it's a hash of raw bytes, no
+                        # parsing needed) -- two unreadable copies of the same bad file should still
+                        # show up as an exact duplicate. No doc_vec though: nothing was classified.
+                        try:
+                            record["sha256"] = file_sha256(full_path)
+                        except Exception:
+                            record["sha256"] = None
+                        record["doc_vec"] = None
+                        # cache the unreadable outcome too -- a corrupt/unsupported file must not
+                        # be re-read from disk on every single run.
+                        doc_cache.put(cache_key, {
+                            "unreadable": True, "reason": reason, "sha256": record["sha256"],
+                        })
+                        st.session_state.results.append(record)
+                        _log(fn, "-", 0.0, "could not read")
+                        progress_bar.progress(i / total)
+                        continue
 
-                    year_info = extract_academic_year(text)
-                    # Task 1: reuse the title piggybacked onto the adjudication call instead of a
-                    # second LLM call; fall back to suggest_name() only when it's empty.
-                    suggested_name = result.get("title") or suggest_name(
-                        text,
-                        criterion_name=(chosen["criterion_name"] if chosen else ""),
-                        metric_id=(chosen["id"] if chosen else ""),
-                    )
-                except Exception as e:
-                    # Same rule as above: one document's classifier error must not stop
-                    # the whole batch -- park it in "Could not be opened" and move on.
-                    record["unreadable"] = True
-                    record["reason"] = f"The assistant could not read this file properly. Details: {e}"
-                    record["status"] = "unreadable"
                     try:
-                        record["sha256"] = file_sha256(full_path)
-                    except Exception:
-                        record["sha256"] = None
-                    record["doc_vec"] = None
-                    st.session_state.results.append(record)
-                    _log(fn, "-", 0.0, "could not read")
-                    progress_bar.progress(i / total)
-                    continue
+                        result = classify(text, metrics, metric_vecs, pack_name=pack_name)
+                        chosen = result["chosen"]
 
-                record.update({
-                    "confidence": result["confidence"],
-                    "engine_status": result["status"],   # "auto" or "review" from the model
-                    # metric-vs-criterion commit granularity: the gap report needs it to
-                    # count strong vs tentative evidence honestly (None = engine unsure).
-                    "commit_level": result.get("commit_level"),
-                    "evidence": result["evidence"],
-                    "candidates": result["candidates"],
-                    "doc_preview": text[:400],
-                    "chosen_metric": chosen,  # dict or None
-                    "year": year_info["year"],
-                    "year_confidence": year_info["confidence"],
-                    "suggested_name": suggested_name,
-                    # Feature A: this doc's embedding, kept so corrections.record() can be called
-                    # later if a human corrects/confirms it in the review tab below.
-                    "doc_vec": result.get("doc_vec"),
-                    # True when corrections memory recognised this doc outright (>=0.95 similarity
-                    # to a past human correction) -- surfaced as a small tag in the results table.
-                    "learned": result.get("learned", False),
-                    # Feature B: file hash for exact-duplicate detection across this run.
-                    "sha256": file_sha256(full_path),
-                })
+                        year_info = extract_academic_year(text)
+                        # Task 1: reuse the title piggybacked onto the adjudication call instead of a
+                        # second LLM call; fall back to suggest_name() only when it's empty.
+                        suggested_name = result.get("title") or suggest_name(
+                            text,
+                            criterion_name=(chosen["criterion_name"] if chosen else ""),
+                            metric_id=(chosen["id"] if chosen else ""),
+                        )
+                    except Exception as e:
+                        # Same rule as above: one document's classifier error must not stop
+                        # the whole batch -- park it in "Could not be opened" and move on.
+                        record["unreadable"] = True
+                        record["reason"] = f"The assistant could not read this file properly. Details: {e}"
+                        record["status"] = "unreadable"
+                        try:
+                            record["sha256"] = file_sha256(full_path)
+                        except Exception:
+                            record["sha256"] = None
+                        record["doc_vec"] = None
+                        doc_cache.put(cache_key, {
+                            "unreadable": True, "reason": record["reason"], "sha256": record["sha256"],
+                        })
+                        st.session_state.results.append(record)
+                        _log(fn, "-", 0.0, "could not read")
+                        progress_bar.progress(i / total)
+                        continue
 
-                # decide bucket based on oversight level + engine status
+                    doc_preview = text[:400]
+                    sha = file_sha256(full_path)
+                    record.update({
+                        "confidence": result["confidence"],
+                        "engine_status": result["status"],   # "auto" or "review" from the model
+                        # metric-vs-criterion commit granularity: the gap report needs it to
+                        # count strong vs tentative evidence honestly (None = engine unsure).
+                        "commit_level": result.get("commit_level"),
+                        "evidence": result["evidence"],
+                        "candidates": result["candidates"],
+                        "doc_preview": doc_preview,
+                        "chosen_metric": chosen,  # dict or None
+                        "year": year_info["year"],
+                        "year_confidence": year_info["confidence"],
+                        "suggested_name": suggested_name,
+                        # Feature A: this doc's embedding, kept so corrections.record() can be called
+                        # later if a human corrects/confirms it in the review tab below.
+                        "doc_vec": result.get("doc_vec"),
+                        # True when corrections memory recognised this doc outright (>=0.95 similarity
+                        # to a past human correction) -- surfaced as a small tag in the results table.
+                        "learned": result.get("learned", False),
+                        # Feature B: file hash for exact-duplicate detection across this run.
+                        "sha256": sha,
+                    })
+
+                    # Cache the CLASSIFICATION ONLY -- NOT the oversight bucketing (status/
+                    # decided_by), which the shared tail below applies fresh for both hit and
+                    # miss paths (see the big comment above the `for` loop).
+                    doc_cache.put(cache_key, {
+                        "unreadable": False,
+                        "chosen_metric": chosen,
+                        "confidence": result["confidence"],
+                        "engine_status": result["status"],
+                        "commit_level": result.get("commit_level"),
+                        "evidence": result["evidence"],
+                        "candidates": result["candidates"],
+                        "doc_vec": result.get("doc_vec"),
+                        "learned": result.get("learned", False),
+                        "year": year_info["year"],
+                        "year_confidence": year_info["confidence"],
+                        "suggested_name": suggested_name,
+                        "doc_preview": doc_preview,
+                        "sha256": sha,
+                    })
+
+                # ---- shared tail: identical for cache hit and cache miss ---------------------
+                # decide bucket based on oversight level + engine status. Applied fresh every
+                # run (never cached) so the same file at L1 vs L3 buckets differently even from
+                # an identical cached classification.
                 if oversight_level == "L1":
                     record["status"] = "review"
                 elif oversight_level == "L2":
-                    record["status"] = "review" if result["status"] == "review" else "auto"
+                    record["status"] = "review" if record["engine_status"] == "review" else "auto"
                 else:  # L3
                     record["status"] = "auto"
 
@@ -441,11 +549,12 @@ if start_clicked:
 
                 st.session_state.results.append(record)
 
+                chosen = record["chosen_metric"]
                 suggestion_txt = (
                     f"{chosen['id']} ({chosen['criterion_name']})" if chosen else "no confident match"
                 )
                 if record["status"] == "auto":
-                    _log(fn, suggestion_txt, result["confidence"], "auto-filed")
+                    _log(fn, suggestion_txt, record["confidence"], "auto-filed")
 
                 progress_bar.progress(i / total)
 

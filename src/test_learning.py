@@ -115,6 +115,56 @@ def test_corrections_corrupt_file():
     check("missing file also behaves like empty memory", entry is None and cos == 0.0)
 
 
+def test_corrections_learned_override():
+    print("\n== corrections.py: learned_override() -- cache-hit twin of classify()'s fast path ==")
+    corrections.STORE_PATH = os.path.join(os.path.dirname(__file__), "..", "output", "_test_corrections_override.json")
+    if os.path.exists(corrections.STORE_PATH):
+        os.remove(corrections.STORE_PATH)
+
+    metrics = [
+        {"id": "5.1.1", "criterion": "5", "criterion_name": "Student Support", "ki": "5.1",
+         "text": "scholarship metric", "search_text": "x"},
+        {"id": "3.3.1", "criterion": "3", "criterion_name": "Research", "ki": "3.3",
+         "text": "research metric", "search_text": "x"},
+    ]
+
+    near_vec = [1.0, 0.0, 0.0, 0.0]
+    corrections.record("packA", "5.1.1", near_vec, "scholarship_list.pdf", note="accepted")
+
+    # same vector -> cosine ~1.0 -> well above LEARNED_AUTO_THRESHOLD (0.95)
+    learned, cos = corrections.learned_override("packA", near_vec, metrics)
+    check("exact-vector match returns the learned metric (5.1.1)",
+          learned is not None and learned["id"] == "5.1.1", str(learned))
+    check("cosine is ~1.0", cos > 0.9999, str(cos))
+
+    # a near-identical vector (small edit) should still clear 0.95
+    near_ish = [0.999, 0.01, 0.0, 0.0]
+    learned2, cos2 = corrections.learned_override("packA", near_ish, metrics)
+    check("near-identical vector also overrides", learned2 is not None and learned2["id"] == "5.1.1", str(cos2))
+
+    # a far vector (unrelated doc) must NOT override
+    far_vec = [0.0, 0.0, 1.0, 0.0]
+    learned3, cos3 = corrections.learned_override("packA", far_vec, metrics)
+    check("far vector -> no override (None)", learned3 is None, str(learned3))
+    check("far vector cosine is low", cos3 < 0.5, str(cos3))
+
+    # metric id no longer present in the current pack -- must not crash, must return None
+    metrics_without_511 = [m for m in metrics if m["id"] != "5.1.1"]
+    learned4, cos4 = corrections.learned_override("packA", near_vec, metrics_without_511)
+    check("corrected metric id missing from current pack -> None (no crash)", learned4 is None, str(learned4))
+
+    # no memory yet for this pack -> (None, 0.0), no crash
+    learned5, cos5 = corrections.learned_override("packB-empty", near_vec, metrics)
+    check("no memory for pack -> (None, 0.0)", learned5 is None and cos5 == 0.0)
+
+    # doc_vec missing/None -> defensive no-op, matches lookup()'s own guard
+    learned6, cos6 = corrections.learned_override("packA", None, metrics)
+    check("doc_vec=None -> (None, 0.0), no crash", learned6 is None and cos6 == 0.0)
+
+    if os.path.exists(corrections.STORE_PATH):
+        os.remove(corrections.STORE_PATH)
+
+
 # ---------------------------------------------------------------------------
 # pipeline.classify(): learned fast-return (>=0.95) and learned hint (0.88-0.95)
 # ---------------------------------------------------------------------------
@@ -388,6 +438,7 @@ def main():
     test_corrections_roundtrip()
     test_corrections_fifo_cap()
     test_corrections_corrupt_file()
+    test_corrections_learned_override()
     test_classify_learned_fast_path()
     test_classify_learned_hint()
     test_classify_no_false_learned_hit()
@@ -395,7 +446,8 @@ def main():
     test_chat_model_tiering()
 
     # clean up test artifacts
-    for p in ["_test_corrections.json", "_test_corrections_fifo.json", "_test_corrections_corrupt.json"]:
+    for p in ["_test_corrections.json", "_test_corrections_fifo.json", "_test_corrections_corrupt.json",
+              "_test_corrections_override.json"]:
         full = os.path.join(os.path.dirname(__file__), "..", "output", p)
         if os.path.exists(full):
             os.remove(full)

@@ -18,6 +18,7 @@ from pipeline import embed_metrics, classify, _pack_hash
 from enrich import extract_academic_year, suggest_name
 from ollama_client import CHAT_MODEL
 import doc_cache
+import corrections
 from gap_report import build_gap_report, format_gap_report_text, format_summary_card_text
 from duplicates import find_duplicates, file_sha256
 from openpyxl import Workbook
@@ -72,6 +73,20 @@ def main():
             # key -- default to "readable" rather than guessing wrong in either direction.
             unreadable = cached.get("unreadable", False)
             cached_tag = " [cached]"
+
+            # Parity fix: a cache HIT used to skip corrections entirely, so a document a human
+            # corrected AFTER it was first cached would keep reporting its stale (pre-correction)
+            # metric forever. Cheap here -- no LLM, no re-embedding, doc_vec is already known --
+            # so apply the same >=0.95 learned-override classify() would apply on a fresh run.
+            if not unreadable:
+                learned_metric, _cos = corrections.learned_override(pack_name, r.get("doc_vec"), metrics)
+                if learned_metric is not None:
+                    r = dict(r)  # don't mutate the cached dict in place
+                    r["chosen"] = learned_metric
+                    r["commit_level"] = "metric"
+                    r["confidence"] = 0.99
+                    r["status"] = "auto"
+                    r["learned"] = True
         else:
             text = read_document(full_path)
             # gap_report needs to know "could not read" separately from "low-confidence

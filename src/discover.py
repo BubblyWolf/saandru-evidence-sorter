@@ -22,9 +22,11 @@ _JUNK_NAMES = {"thumbs.db", "desktop.ini", "_ground_truth.json", "_expected.json
 # Junk filename suffixes to always skip.
 _JUNK_SUFFIXES = (".tmp", ".lnk", ".ini", ".db")
 
-# Saandru's own output folder -- if the tool is re-run on a folder it already
+# Saandru's own output folders -- if the tool is re-run on a folder it already
 # organized, its own copies must never be re-ingested as "new" source documents.
-_OWN_OUTPUT_DIRNAME = "Saandru_Sorted"
+# "Praman_Sorted" is the LEGACY name (the tool was renamed from Praman to Saandru);
+# kept here so a folder organized by an older build is still excluded on re-run.
+_OWN_OUTPUT_DIRNAMES = {"Saandru_Sorted", "Praman_Sorted"}
 
 
 def _is_junk_name(name):
@@ -55,12 +57,12 @@ def discover_files(folder):
 
     results = []
     for root, dirnames, filenames in os.walk(folder):
-        # Prune Saandru_Sorted (and any hidden "." dirs) BEFORE os.walk descends
-        # into them -- cheaper than filtering afterwards, and guarantees we never
-        # re-ingest our own prior output.
+        # Prune our own output folders (current + legacy name) and any hidden "."
+        # dirs BEFORE os.walk descends into them -- cheaper than filtering afterwards,
+        # and guarantees we never re-ingest our own prior output.
         dirnames[:] = [
             d for d in dirnames
-            if d != _OWN_OUTPUT_DIRNAME and not d.startswith(".")
+            if d not in _OWN_OUTPUT_DIRNAMES and not d.startswith(".")
         ]
 
         for name in filenames:
