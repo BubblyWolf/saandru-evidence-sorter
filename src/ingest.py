@@ -139,8 +139,45 @@ def _read_txt(path):
 
 
 def _read_docx(path):
+    """Extract paragraphs AND table cells AND header/footer text from a .docx.
+
+    Real college documents (MoU lists, faculty/committee lists, attendance sheets)
+    keep almost all their content in TABLES -- and letterheads/circular titles often
+    sit in headers. The old reader took only Document(path).paragraphs, so a MoU
+    list with a 110-cell table came back as ~60 characters and the classifier saw
+    almost nothing. We now also walk every table (including tables nested inside
+    cells) and each section's header/footer. Order isn't critical for
+    classification (it is a bag-of-words match), so we simply append tables after
+    paragraphs rather than reconstruct exact body order."""
     from docx import Document
-    return "\n".join(p.text for p in Document(path).paragraphs)
+    doc = Document(path)
+    parts = [p.text for p in doc.paragraphs if p.text and p.text.strip()]
+
+    def _walk_tables(tables):
+        for table in tables:
+            for row in table.rows:
+                cells = [c.text.strip() for c in row.cells if c.text and c.text.strip()]
+                if cells:
+                    parts.append(" | ".join(cells))
+                # a cell can itself contain nested tables -- recurse so those aren't lost
+                for cell in row.cells:
+                    if cell.tables:
+                        _walk_tables(cell.tables)
+
+    _walk_tables(doc.tables)
+
+    # headers/footers (letterhead, circular reference numbers, dates) -- best-effort,
+    # never let a missing/odd section break the whole read.
+    try:
+        for section in doc.sections:
+            for hf in (section.header, section.footer):
+                for p in hf.paragraphs:
+                    if p.text and p.text.strip():
+                        parts.append(p.text)
+    except Exception:
+        pass
+
+    return "\n".join(parts)
 
 
 def _read_csv(path):

@@ -15,12 +15,15 @@ try:
 except Exception:
     corrections = None
 
-# Bump this whenever classify()'s LOGIC changes (prompt, voting, thresholds, fast path):
-# doc_cache keys include it, so old cached answers from an older brain are never served.
-# v4: corrections-memory fast path/hint injection + classify() now always returns doc_vec --
-# both are new LOGIC (a document that used to land in review can now auto-file), so old
-# cached answers (from a brain that didn't know about corrections) must not be served.
-PIPELINE_VERSION = "5"
+# Bump this whenever anything that changes a document's RESULT changes: classify()'s
+# logic (prompt, voting, thresholds, fast path) OR how ingest.py extracts a document's
+# text (the doc_cache key is sha256(file BYTES)+pack+model+this version, so an
+# extraction change on an UNCHANGED file would otherwise keep serving the stale result).
+# v4: corrections-memory fast path/hint injection + classify() now always returns doc_vec.
+# v6: _read_docx now also reads TABLE cells + headers/footers -- table-heavy college docs
+# (MoU/committee/attendance lists) used to extract as near-empty, so their old cached
+# results must not be served.
+PIPELINE_VERSION = "6"
 
 # corrections-memory thresholds (Feature A): a remembered document doesn't have to be
 # byte-identical to fire -- nomic-embed-text similarity this high means "basically the same
