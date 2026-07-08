@@ -12,8 +12,21 @@ the model is downloaded.**
 
 ## Screenshots
 
-*(add screenshots of the app here before publishing — Step 1–4 of the on-screen flow, the review card,
-and a sample gap report)*
+**Step 1 & 2 — point it at a folder, choose how much it should decide on its own**
+
+![Landing screen — folder path, accreditation type, oversight level](docs/screenshots/1_landing.png)
+
+**What the tool does, explained in one glance**
+
+![Explanation panel](docs/screenshots/2_what_it_does.png)
+
+**After a run — files sorted, ready to review**
+
+![Results table with criterion, metric, year, confidence, and evidence quote per file](docs/screenshots/3_results.png)
+
+**Coverage & Gaps — what evidence exists, and what's still missing**
+
+![Per-criterion coverage bars and gap list](docs/screenshots/4_coverage_gaps.png)
 
 ## Features
 
