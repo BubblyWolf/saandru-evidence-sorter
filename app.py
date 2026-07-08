@@ -26,7 +26,7 @@ from discover import discover_files    # noqa: E402
 from organize import organize          # noqa: E402
 from verify_sorted import verify, format_verify_text  # noqa: E402
 from enrich import extract_academic_year, suggest_name  # noqa: E402
-from gap_report import build_gap_report, format_gap_report_text, format_summary_card_text  # noqa: E402
+from gap_report import build_gap_report, format_gap_report_text, format_summary_card_text, _shorten  # noqa: E402
 import corrections                     # noqa: E402  -- Feature A: learn from human corrections
 from duplicates import find_duplicates, file_sha256  # noqa: E402  -- Feature B: duplicate finder
 from report_pdf import render_gap_report_pdf_bytes, render_gap_report_html_str  # noqa: E402 -- Task 1: PDF/HTML reports.
@@ -690,11 +690,11 @@ if st.session_state.run_done:
                 if missing_rows:
                     st.write("**MISSING — no evidence found yet:**")
                     for row in missing_rows:
-                        st.write(f"- {row['id']}: {row['text'][:70]}")
+                        st.write(f"- {row['id']}: {_shorten(row['text'])}")
                 if tentative_rows:
                     st.write("**TENTATIVE — needs a human to confirm:**")
                     for row in tentative_rows:
-                        st.write(f"- {row['id']}: {row['text'][:70]}")
+                        st.write(f"- {row['id']}: {_shorten(row['text'])}")
 
     # ---- Build (or reuse) all downloadable report bytes ONCE per result-set ----
     # Issue 1 fix: this used to rebuild the .txt/PDF/HTML/Excel payloads -- and write
