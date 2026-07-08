@@ -24,11 +24,37 @@ looping over documents. Recognised keys (all optional except filename):
 Nothing here decides folders or touches disk -- it is pure counting so it can be unit
 tested without Ollama and reused by both run.py (console + Excel) and app.py (Streamlit).
 """
+import re
+
+
+def _shorten(text, n=110):
+    """Trim `text` to at most `n` characters WITHOUT cutting a word in half, and only
+    append an ellipsis when something was actually removed. Also collapses runs of
+    whitespace first -- some metric texts carry a stray internal space from the source
+    PDF/OCR extraction (e.g. "Numbe r", "regio n"), and squashing that first stops a
+    broken word from tripping up the word-boundary check below. A text that already
+    fits within `n` chars is returned untouched -- it must never gain a trailing
+    ellipsis just because it happened to end near the limit."""
+    text = re.sub(r"\s+", " ", text or "").strip()
+    if len(text) <= n:
+        return text
+    cut = text[:n]
+    last_space = cut.rfind(" ")
+    if last_space > 0:
+        cut = cut[:last_space]
+    return cut.rstrip() + "…"
 
 
 def _get_chosen(decision):
     """run.py calls this key "chosen"; app.py calls it "chosen_metric". Accept either."""
     return decision.get("chosen") or decision.get("chosen_metric")
+
+
+def _get_filename(decision):
+    """run.py/app.py both use "filename" for the decisions they build, but keep the
+    same "file" fallback the rest of this module already tolerates elsewhere, and never
+    blow up a report just because one decision dict is missing it."""
+    return decision.get("filename") or decision.get("file") or "(unknown file)"
 
 
 def _is_unreadable(decision):
@@ -65,6 +91,9 @@ def build_gap_report(decisions, metrics):
         })
         ki["metrics"][m["id"]] = {
             "id": m["id"], "text": m["text"], "evidence_count": 0, "tentative_count": 0,
+            # Issue 3 (faculty quick-reference): WHICH file(s) are filed against this
+            # metric, not just how many. Each entry is {"filename", "year"}.
+            "evidence_files": [], "tentative_files": [],
             "_order": len(ki["metrics"]),
         }
 
@@ -80,6 +109,9 @@ def build_gap_report(decisions, metrics):
     overall = {
         "docs_scanned": len(decisions), "committed": 0, "in_review": 0,
         "unreadable": 0, "criterion_only_commits": 0, "metric_commits": 0,
+        # Issue 3: flat filename-first index across the WHOLE pack, every committed
+        # decision -- {"filename","criterion","criterion_name","metric_id","year","strength"}.
+        "documents_on_file": [],
     }
 
     for d in decisions:
@@ -101,22 +133,39 @@ def build_gap_report(decisions, metrics):
         if row is None:
             continue  # metric id not in this pack (e.g. report run against a different pack)
 
+        filename = _get_filename(d)
+        year = d.get("year")
+
         if "commit_level" in d:
             commit_level = d.get("commit_level")
-            if commit_level == "metric":
-                # engine converged on the exact metric, or a human confirmed/changed it
-                # (the review handlers stamp "metric" on Accept/Save) -> strong evidence.
-                row["evidence_count"] += 1
-                overall["metric_commits"] += 1
-            else:
-                # "criterion" (right area, metric was a best guess) OR None-with-auto
-                # (L3 blanket-trust filed an engine-unsure doc) -> tentative, never strong.
-                row["tentative_count"] += 1
-                overall["criterion_only_commits"] += 1
+            strong = commit_level == "metric"
         else:
             # legacy decisions that never carried the field -> keep old behavior (strong)
+            strong = True
+
+        if strong:
+            # engine converged on the exact metric, or a human confirmed/changed it
+            # (the review handlers stamp "metric" on Accept/Save) -> strong evidence.
             row["evidence_count"] += 1
+            row["evidence_files"].append({"filename": filename, "year": year})
             overall["metric_commits"] += 1
+            strength = "strong"
+        else:
+            # "criterion" (right area, metric was a best guess) OR None-with-auto
+            # (L3 blanket-trust filed an engine-unsure doc) -> tentative, never strong.
+            row["tentative_count"] += 1
+            row["tentative_files"].append({"filename": filename, "year": year})
+            overall["criterion_only_commits"] += 1
+            strength = "tentative"
+
+        overall["documents_on_file"].append({
+            "filename": filename,
+            "criterion": chosen.get("criterion"),
+            "criterion_name": chosen.get("criterion_name"),
+            "metric_id": chosen.get("id"),
+            "year": year,
+            "strength": strength,
+        })
 
     # ---- per-criterion rollup ----
     criterion_list = []
@@ -188,14 +237,29 @@ def format_gap_report_text(report, pack_name):
                 elif row["evidence_count"] == 0 and row["tentative_count"] > 0:
                     tentative_rows.append(row)
 
+        # Issue 3: what IS on file, filename-first, before we tell them what's missing --
+        # a faculty member reading this wants to see proof of their own filing first.
+        present_strong = [(row["id"], f) for ki in crit["kis"] for row in ki["metrics"]
+                           for f in row["evidence_files"]]
+        present_tentative = [(row["id"], f) for ki in crit["kis"] for row in ki["metrics"]
+                              for f in row["tentative_files"]]
+        if present_strong or present_tentative:
+            lines.append("  PRESENT -- documents on file:")
+            for mid, f in present_strong:
+                year_str = f" ({f['year']})" if f.get("year") else ""
+                lines.append(f"    - {mid}: {_shorten(f['filename'])}{year_str}")
+            for mid, f in present_tentative:
+                year_str = f" ({f['year']})" if f.get("year") else ""
+                lines.append(f"    - {mid}: {_shorten(f['filename'])}{year_str} (needs confirmation)")
+
         if missing_rows:
             lines.append("  MISSING -- no evidence found:")
             for row in missing_rows:
-                lines.append(f"    - {row['id']}: {row['text'][:70]}")
+                lines.append(f"    - {row['id']}: {_shorten(row['text'])}")
         if tentative_rows:
             lines.append("  TENTATIVE -- needs human confirmation:")
             for row in tentative_rows:
-                lines.append(f"    - {row['id']}: {row['text'][:70]} "
+                lines.append(f"    - {row['id']}: {_shorten(row['text'])} "
                               f"({row['tentative_count']} document(s) probably match this)")
         if not missing_rows and not tentative_rows:
             lines.append("  Every point in this criterion has at least one strong document. Good.")
@@ -215,7 +279,27 @@ def format_gap_report_text(report, pack_name):
         lines.append("  Nothing missing -- every metric already has at least one document.")
     else:
         for row in todo[:10]:
-            lines.append(f"  Start collecting: {row['id']} -- {row['text'][:70]}")
+            lines.append(f"  Start collecting: {row['id']} -- {_shorten(row['text'])}")
+
+    # ---- DOCUMENTS FILED (quick reference): Issue 3 -- flat, filename-first index of
+    # every filed document across the WHOLE pack, so a faculty member who knows the
+    # filename can scan straight to it instead of hunting criterion by criterion. ----
+    lines.append("-" * 78)
+    lines.append("DOCUMENTS FILED (quick reference)")
+    docs_on_file = sorted(
+        report["overall"].get("documents_on_file", []),
+        key=lambda d: (str(d.get("criterion")), str(d.get("metric_id"))),
+    )
+    if not docs_on_file:
+        lines.append("  Nothing has been filed yet.")
+    else:
+        for d in docs_on_file:
+            year_str = f" ({d['year']})" if d.get("year") else ""
+            note = "" if d.get("strength") == "strong" else " (needs confirmation)"
+            lines.append(
+                f"  {_shorten(d['filename'])}  ->  Criterion {d.get('criterion')} / "
+                f"{d.get('metric_id')}{year_str}{note}"
+            )
 
     lines.append("=" * 78)
     return "\n".join(lines)

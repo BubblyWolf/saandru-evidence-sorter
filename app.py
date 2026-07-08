@@ -29,7 +29,10 @@ from enrich import extract_academic_year, suggest_name  # noqa: E402
 from gap_report import build_gap_report, format_gap_report_text, format_summary_card_text  # noqa: E402
 import corrections                     # noqa: E402  -- Feature A: learn from human corrections
 from duplicates import find_duplicates, file_sha256  # noqa: E402  -- Feature B: duplicate finder
-from report_pdf import write_gap_report_pdf, write_gap_report_html  # noqa: E402  -- Task 1: PDF/HTML reports
+from report_pdf import render_gap_report_pdf_bytes, render_gap_report_html_str  # noqa: E402 -- Task 1: PDF/HTML reports.
+# Issue 1 fix: app.py only ever uses the in-memory bytes/string renderers above -- never
+# the disk-writing write_gap_report_pdf()/write_gap_report_html() (those stay run.py-only,
+# see src/report_pdf.py). A Streamlit rerun must not create/overwrite a report file.
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CRITERIA_DIR = os.path.join(BASE_DIR, "criteria")
@@ -113,6 +116,10 @@ def _init_state():
         "metrics": None,
         "pack_name": None,
         "review_index": 0,      # which review card is currently shown
+        # Issue 1 fix: cached in-memory report bytes + the decisions-signature they were
+        # built from, so download_button gets stable `data=` across unrelated reruns.
+        "_report_sig": None,
+        "_report_cache": None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -166,6 +173,55 @@ def _progress_message(index_1based, total, elapsed_seconds):
     files_left = total - index_1based
     eta_seconds = avg_seconds_per_file * files_left
     return f"Reading file {index_1based} of {total} -- {_format_time_left(eta_seconds)}"
+
+
+def _decisions_signature(results):
+    """A hashable snapshot of exactly what the downloadable reports depend on.
+    Streamlit reruns this WHOLE script on every button click -- Accept, Skip,
+    Organise, Check my folder, anything -- so building the report bytes
+    unconditionally on every rerun used to hand each download_button a brand
+    new `data` object (with a freshly-stamped "Generated: <time>" line inside
+    it) even when the user clicked something that changed nothing about the
+    decisions. Streamlit treats a changed `data=` as a new file and re-serves
+    the download -- that is the "every click re-downloads the PDF" bug a
+    faculty tester hit. Caching the built bytes against this signature (see the
+    Coverage & Gaps section below) means the bytes only regenerate when a
+    decision genuinely changes (an Accept/Change/Save), not on every rerun."""
+    return tuple(
+        (r.get("file"), (r.get("chosen_metric") or {}).get("id"), r.get("status"), r.get("decided_by"))
+        for r in results
+    )
+
+
+def _build_excel_bytes(results):
+    """Evidence Index workbook as an in-memory .xlsx -- returns a BytesIO, ready
+    for st.download_button's `data=`. Pulled out to module level (it used to be
+    a closure defined right before its one call site) so the report-caching
+    block below can call it too."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Evidence Index"
+    ws.append(["File", "Criterion", "Metric", "Year", "Confidence", "Decided by",
+               "Evidence quote", "Suggested name"])
+    for r in results:
+        if r.get("unreadable"):
+            ws.append([r["file"], "-", "-", "-", "-", "-", r.get("reason", ""), "-"])
+            continue
+        c = r.get("chosen_metric")
+        ws.append([
+            r["file"],
+            f"{c['criterion']} - {c['criterion_name']}" if c else "-",
+            c["id"] if c else "NONE",
+            r.get("year") or "-",
+            r.get("confidence", 0),
+            r.get("decided_by", "pending"),
+            r.get("evidence", ""),
+            r.get("suggested_name", ""),
+        ])
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf
 
 
 # --------------------------------------------------------------------------
@@ -244,7 +300,7 @@ st.caption(f"Reading model on this PC: {CHAT_MODEL} ({CHAT_MODEL_REASON})")
 
 start_col, _ = st.columns([1, 3])
 with start_col:
-    start_clicked = st.button("▶️  Start sorting", type="primary", use_container_width=True)
+    start_clicked = st.button("▶️  Start sorting", type="primary", use_container_width=True, key="btn_start_sorting")
 
 if start_clicked:
     if not folder_path or not os.path.isdir(folder_path):
@@ -596,6 +652,8 @@ if st.session_state.run_done:
             # thread the granularity through so tentative (criterion-only / L3
             # blanket-trust) evidence is never displayed as strong in the UI.
             "commit_level": r.get("commit_level"),
+            # Issue 3: needed for the "documents on file" / "DOCUMENTS FILED" listings.
+            "year": r.get("year"),
         }
         for r in results
     ]
@@ -638,51 +696,77 @@ if st.session_state.run_done:
                     for row in tentative_rows:
                         st.write(f"- {row['id']}: {row['text'][:70]}")
 
-    gap_report_txt = (
-        format_summary_card_text(gap_report, st.session_state.pack_name)
-        + "\n\n" + format_gap_report_text(gap_report, st.session_state.pack_name)
-    )
+    # ---- Build (or reuse) all downloadable report bytes ONCE per result-set ----
+    # Issue 1 fix: this used to rebuild the .txt/PDF/HTML/Excel payloads -- and write
+    # PDF/HTML files under output/_app_report_tmp -- on EVERY Streamlit rerun (every
+    # single button click reruns this whole script). Each rebuild embedded a fresh
+    # "Generated: <timestamp>" line, so every download_button got a brand new `data`
+    # object each time and Streamlit re-served the download, even for a click that
+    # changed nothing (Organise, Check my folder, an unrelated widget). Fix: build the
+    # bytes/string ONCE, cache them in session_state keyed by a signature of the actual
+    # decisions (see _decisions_signature() above), and only rebuild when that signature
+    # changes (i.e. the user actually Accepted/Changed/Saved a review). Nothing is
+    # written to disk here -- run.py's console/batch path still writes the real
+    # gap_report.pdf/.txt/.html files, unchanged.
+    report_sig = (st.session_state.pack_name, _decisions_signature(results))
+    if st.session_state.get("_report_sig") != report_sig:
+        try:
+            report_txt = (
+                format_summary_card_text(gap_report, st.session_state.pack_name)
+                + "\n\n" + format_gap_report_text(gap_report, st.session_state.pack_name)
+            )
+            # render_gap_report_pdf_bytes() never raises -- it returns None only when
+            # reportlab itself is missing, in which case the HTML string (always
+            # produced) is offered instead so office staff always get SOMETHING to
+            # download and print.
+            pdf_bytes = render_gap_report_pdf_bytes(gap_report, st.session_state.pack_name)
+            html_str = render_gap_report_html_str(gap_report, st.session_state.pack_name)
+            st.session_state["_report_cache"] = {
+                "txt": report_txt.encode("utf-8"),
+                "pdf": pdf_bytes,
+                "html": html_str.encode("utf-8"),
+                "excel": _build_excel_bytes(results).getvalue(),
+            }
+            st.session_state["_report_sig"] = report_sig
+        except Exception as e:
+            _friendly_error("The report files could not be prepared right now. "
+                             "Try again, or check the technical details below.", e)
+            # leave "_report_sig" unset so the next rerun retries the build; give the
+            # download buttons below SOMETHING empty to point at meanwhile rather than
+            # a None that would crash the subscripting below.
+            if not st.session_state.get("_report_cache"):
+                st.session_state["_report_cache"] = {"txt": b"", "pdf": None, "html": b"", "excel": b""}
+    _reports = st.session_state["_report_cache"]
+
     st.download_button(
         "⬇️  Download gap report (.txt)",
-        data=gap_report_txt.encode("utf-8"),
+        data=_reports["txt"],
         file_name="gap_report.txt",
         mime="text/plain",
+        key="dl_txt",
     )
 
-    # ---- PDF report (Task 1): write both a PDF and an HTML version to a temp
-    # file, then offer whichever one actually turned into a real PDF for
-    # download. write_gap_report_pdf() never raises -- it returns False (no
-    # usable PDF) if reportlab is missing or something went wrong, in which
-    # case the HTML file (always produced) is offered instead so office staff
-    # always get SOMETHING to download and print.
-    try:
-        _report_tmp_dir = os.path.join(BASE_DIR, "output", "_app_report_tmp")
-        os.makedirs(_report_tmp_dir, exist_ok=True)
-        _pdf_path = os.path.join(_report_tmp_dir, "gap_report.pdf")
-        _html_path = os.path.join(_report_tmp_dir, "gap_report.html")
-        _pdf_ok = write_gap_report_pdf(gap_report, st.session_state.pack_name, _pdf_path)
-        write_gap_report_html(gap_report, st.session_state.pack_name, _html_path)
-
-        if _pdf_ok and os.path.exists(_pdf_path) and os.path.getsize(_pdf_path) > 0:
-            with open(_pdf_path, "rb") as f:
-                st.download_button(
-                    "⬇️  Download PDF report",
-                    data=f.read(),
-                    file_name="gap_report.pdf",
-                    mime="application/pdf",
-                )
-        else:
-            with open(_html_path, "rb") as f:
-                st.download_button(
-                    "⬇️  Download report (open in browser)",
-                    data=f.read(),
-                    file_name="gap_report.html",
-                    mime="text/html",
-                )
-            st.caption("Open this file and press Ctrl+P to save as PDF.")
-    except Exception as e:
-        _friendly_error("The PDF/report file could not be prepared right now. "
-                         "You can still use the .txt report above.", e)
+    # ---- PDF report (Task 1, in-memory -- Issue 1 fix): offer whichever of PDF/HTML
+    # actually turned into a real PDF. `_reports["pdf"]` is None only when reportlab is
+    # not installed on this machine; the HTML string (always produced) is offered
+    # instead so office staff always get SOMETHING to download and print.
+    if _reports["pdf"]:
+        st.download_button(
+            "⬇️  Download PDF report",
+            data=_reports["pdf"],
+            file_name="gap_report.pdf",
+            mime="application/pdf",
+            key="dl_pdf",
+        )
+    else:
+        st.download_button(
+            "⬇️  Download report (open in browser)",
+            data=_reports["html"],
+            file_name="gap_report.html",
+            mime="text/html",
+            key="dl_html",
+        )
+        st.caption("Open this file and press Ctrl+P to save as PDF.")
 
     # ---- Duplicate finder (Feature B): deterministic, embeddings + sha256 only -- no LLM. ----
     dup_items = [
@@ -709,41 +793,15 @@ if st.session_state.run_done:
     if not all_decided:
         st.info("Finish reviewing the 🟡 unsure files above, then you can download the Excel index.")
 
-    def _build_excel_bytes():
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Evidence Index"
-        ws.append(["File", "Criterion", "Metric", "Year", "Confidence", "Decided by",
-                   "Evidence quote", "Suggested name"])
-        for r in results:
-            if r.get("unreadable"):
-                ws.append([r["file"], "-", "-", "-", "-", "-", r.get("reason", ""), "-"])
-                continue
-            c = r.get("chosen_metric")
-            ws.append([
-                r["file"],
-                f"{c['criterion']} - {c['criterion_name']}" if c else "-",
-                c["id"] if c else "NONE",
-                r.get("year") or "-",
-                r.get("confidence", 0),
-                r.get("decided_by", "pending"),
-                r.get("evidence", ""),
-                r.get("suggested_name", ""),
-            ])
-        buf = io.BytesIO()
-        wb.save(buf)
-        buf.seek(0)
-        return buf
-
     dl_col, _ = st.columns([1, 3])
     with dl_col:
-        excel_bytes = _build_excel_bytes()
         st.download_button(
             "⬇️  Download Excel index",
-            data=excel_bytes,
+            data=_reports["excel"],
             file_name="evidence_index.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
+            key="dl_excel",
         )
 
     with st.expander("📜 Audit log (every decision made)"):
@@ -774,6 +832,7 @@ if st.session_state.run_done:
             type="primary",
             use_container_width=True,
             disabled=organize_disabled,
+            key="btn_organize",
         )
 
     if organize_clicked:
@@ -834,7 +893,7 @@ if st.session_state.run_done:
     check_target = st.session_state.get("last_sorted_dir") or default_sorted_dir
     if check_target and os.path.isdir(check_target):
         st.caption("This checks that no one has quietly changed, moved, or deleted a filed document by hand.")
-        if st.button("🛡 Check my folder", use_container_width=False):
+        if st.button("🛡 Check my folder", use_container_width=False, key="btn_verify"):
             try:
                 with st.spinner("Comparing the folder against its record..."):
                     verify_result = verify(check_target)

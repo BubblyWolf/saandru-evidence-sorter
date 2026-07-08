@@ -97,6 +97,9 @@ def main():
         decisions.append({
             "filename": fn, "status": r["status"], "commit_level": r.get("commit_level"),
             "chosen": r["chosen"], "unreadable": unreadable,
+            # Issue 3: feeds gap_report's per-metric "documents on file" listing and
+            # the flat "DOCUMENTS FILED" index -- year is already computed above.
+            "year": year,
         })
         # Feature B (duplicate finder): sha256 always (cheap, works on any file including
         # unreadable ones), but doc_vec only for docs that were actually classified -- an
