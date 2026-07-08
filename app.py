@@ -855,7 +855,7 @@ if st.session_state.run_done:
             })
 
         try:
-            with st.spinner("Copying files into Praman_Sorted..."):
+            with st.spinner("Copying files into Saandru_Sorted..."):
                 summary = organize(decisions, folder_path, oversight_level, pack_name=st.session_state.pack_name)
         except Exception as e:
             summary = None
@@ -887,9 +887,9 @@ if st.session_state.run_done:
             st.write("3. **A gap report (PDF or report file)** showing what evidence is still missing — use the report download button above.")
 
     # ---- Tamper check ----
-    # Only shows once a Praman_Sorted folder exists for this source folder (either just
+    # Only shows once a Saandru_Sorted folder exists for this source folder (either just
     # organized above, or from an earlier run) -- checks it against its own _manifest.json.
-    default_sorted_dir = os.path.join(folder_path, "Praman_Sorted") if folder_path else None
+    default_sorted_dir = os.path.join(folder_path, "Saandru_Sorted") if folder_path else None
     check_target = st.session_state.get("last_sorted_dir") or default_sorted_dir
     if check_target and os.path.isdir(check_target):
         st.caption("This checks that no one has quietly changed, moved, or deleted a filed document by hand.")

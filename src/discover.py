@@ -24,7 +24,7 @@ _JUNK_SUFFIXES = (".tmp", ".lnk", ".ini", ".db")
 
 # Saandru's own output folder -- if the tool is re-run on a folder it already
 # organized, its own copies must never be re-ingested as "new" source documents.
-_OWN_OUTPUT_DIRNAME = "Praman_Sorted"
+_OWN_OUTPUT_DIRNAME = "Saandru_Sorted"
 
 
 def _is_junk_name(name):
@@ -46,7 +46,7 @@ def discover_files(folder):
 
     Skips: dotfiles/lock files (~$...), known OS junk (Thumbs.db, desktop.ini),
     Saandru's own ground-truth/expected fixtures, .tmp/.lnk/.ini/.db files, and
-    anything nested inside a "Praman_Sorted" folder (the tool's own output from
+    anything nested inside a "Saandru_Sorted" folder (the tool's own output from
     a prior run). Never filters by extension -- that decision belongs to ingest.py
     so unsupported types still get a clear marker instead of vanishing silently.
     """
@@ -55,7 +55,7 @@ def discover_files(folder):
 
     results = []
     for root, dirnames, filenames in os.walk(folder):
-        # Prune Praman_Sorted (and any hidden "." dirs) BEFORE os.walk descends
+        # Prune Saandru_Sorted (and any hidden "." dirs) BEFORE os.walk descends
         # into them -- cheaper than filtering afterwards, and guarantees we never
         # re-ingest our own prior output.
         dirnames[:] = [

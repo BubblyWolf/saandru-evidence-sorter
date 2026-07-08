@@ -1,7 +1,7 @@
-"""Saandru -- tamper-evident check for a Praman_Sorted folder.
+"""Saandru -- tamper-evident check for a Saandru_Sorted folder.
 
 organize.py writes "_manifest.json" while it copies (sha256 of every copied file, plus
-where it came from). Faculty sometimes edit/move/delete files inside Praman_Sorted by
+where it came from). Faculty sometimes edit/move/delete files inside Saandru_Sorted by
 hand afterwards -- this module compares the folder AS IT IS NOW against that manifest
 and reports exactly what changed, in plain English.
 
@@ -15,7 +15,7 @@ Pure code, zero AI. Four kinds of discrepancy:
               hand). "_manifest.json" and "README.txt" are never flagged as extra --
               they are Saandru's own bookkeeping, not evidence.
 
-Runnable standalone: `python src/verify_sorted.py <path-to-Praman_Sorted>`
+Runnable standalone: `python src/verify_sorted.py <path-to-Saandru_Sorted>`
 """
 import json
 import os
@@ -197,7 +197,7 @@ def format_verify_text(result):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python src/verify_sorted.py <path-to-Praman_Sorted>")
+        print("Usage: python src/verify_sorted.py <path-to-Saandru_Sorted>")
         raise SystemExit(1)
     target = sys.argv[1]
     result = verify(target)

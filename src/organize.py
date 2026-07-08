@@ -3,11 +3,11 @@ Saandru -- file organizer.
 
 Takes the classification decisions the pipeline already made (and the human already
 reviewed, at L1/L2) and COPIES each source document into a tidy set of subfolders,
-one per accreditation criterion, inside a "Praman_Sorted" folder next to the originals.
+one per accreditation criterion, inside a "Saandru_Sorted" folder next to the originals.
 
 Hard rules:
   - COPY only (shutil.copy2). Never move, never delete, never overwrite an original.
-  - Never overwrite an existing file inside Praman_Sorted either -- collisions get a
+  - Never overwrite an existing file inside Saandru_Sorted either -- collisions get a
     _2, _3, ... suffix UNLESS the existing file is byte-identical, in which case the
     copy is skipped (re-running the same folder must not pile up duplicate copies).
   - One bad file must never stop the whole batch: every copy is wrapped so a single
@@ -25,7 +25,7 @@ from duplicates import file_sha256  # reuse the same sha256-file-bytes pattern e
 
 MANIFEST_FILENAME = "_manifest.json"
 
-SORTED_DIRNAME = "Praman_Sorted"
+SORTED_DIRNAME = "Saandru_Sorted"
 NEEDS_REVIEW_DIRNAME = "_NEEDS_REVIEW"
 COULD_NOT_READ_DIRNAME = "_COULD_NOT_READ"
 
@@ -37,7 +37,7 @@ _WINDOWS_RESERVED_NAMES = {
     *{f"LPT{i}" for i in range(1, 10)},
 }
 
-README_TEXT = """Praman_Sorted -- what is this folder?
+README_TEXT = """Saandru_Sorted -- what is this folder?
 ======================================
 
 Everything in here is a COPY. Your original documents were NOT moved, renamed,
@@ -56,7 +56,7 @@ Folder layout:
   - "_COULD_NOT_READ"        -> files Saandru could not open or understand
                                  (unsupported format, corrupt file, etc).
 
-If you delete this whole "Praman_Sorted" folder, nothing is lost -- your
+If you delete this whole "Saandru_Sorted" folder, nothing is lost -- your
 original documents are untouched. You can re-run Saandru at any time to
 regenerate it.
 """
@@ -183,7 +183,7 @@ def _needs_review(decision):
 
 
 def organize(decisions, source_folder, oversight_level=None, pack_name=None):
-    """Copy every document referenced in `decisions` into Praman_Sorted subfolders.
+    """Copy every document referenced in `decisions` into Saandru_Sorted subfolders.
 
     decisions: list of dicts, each describing one processed file. Recognised keys
         (all optional except filename/file):
@@ -204,7 +204,7 @@ def organize(decisions, source_folder, oversight_level=None, pack_name=None):
           - suggested_name        : optional short plain-English title (human-editable) used
                                     to build the copied filename alongside the metric id/year.
 
-    source_folder: the folder the originals live in. "Praman_Sorted" is created
+    source_folder: the folder the originals live in. "Saandru_Sorted" is created
         inside this folder.
     oversight_level: "L1" / "L2" / "L3" -- accepted for the caller's bookkeeping /
         logging; organize() itself just files what `decisions` says to file (the
@@ -309,7 +309,7 @@ def organize(decisions, source_folder, oversight_level=None, pack_name=None):
 if __name__ == "__main__":
     import tempfile
 
-    tmp_root = tempfile.mkdtemp(prefix="praman_organize_test_")
+    tmp_root = tempfile.mkdtemp(prefix="saandru_organize_test_")
     print(f"Self-test working folder: {tmp_root}")
 
     # --- build a small fake source folder --------------------------------------------
@@ -585,7 +585,7 @@ if __name__ == "__main__":
         problems.append("verify: expected ok=False after tampering, got True")
 
     # a clean, untampered folder must report ok=True -- sanity-check on a fresh source
-    clean_root = tempfile.mkdtemp(prefix="praman_organize_clean_test_")
+    clean_root = tempfile.mkdtemp(prefix="saandru_organize_clean_test_")
     with open(os.path.join(clean_root, "a.txt"), "w", encoding="utf-8") as f:
         f.write("clean file")
     clean_decisions = [{
@@ -618,7 +618,7 @@ if __name__ == "__main__":
         print("SELF-TEST PASSED:")
         print(f"  - copied={result['copied']} skipped={result['skipped']} errors={result['errors']}")
         print("  - all originals verified present and unchanged")
-        print(f"  - Praman_Sorted written at: {sorted_dir}")
+        print(f"  - Saandru_Sorted written at: {sorted_dir}")
 
     # cleanup
     shutil.rmtree(tmp_root, ignore_errors=True)

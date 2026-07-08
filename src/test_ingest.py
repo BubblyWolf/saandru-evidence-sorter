@@ -237,7 +237,7 @@ def main():
         shutil.rmtree(discover_root)
     nested_dir = os.path.join(discover_root, "Criterion 3", "MoUs")
     os.makedirs(nested_dir, exist_ok=True)
-    os.makedirs(os.path.join(discover_root, "Praman_Sorted", "Criterion_1"), exist_ok=True)
+    os.makedirs(os.path.join(discover_root, "Saandru_Sorted", "Criterion_1"), exist_ok=True)
 
     real_nested = os.path.join(nested_dir, "mou_2023.pdf")
     with open(real_nested, "w", encoding="utf-8") as f:
@@ -248,7 +248,7 @@ def main():
     thumbs = os.path.join(discover_root, "Thumbs.db")
     with open(thumbs, "wb") as f:
         f.write(b"junk")
-    own_output = os.path.join(discover_root, "Praman_Sorted", "Criterion_1", "old_copy.pdf")
+    own_output = os.path.join(discover_root, "Saandru_Sorted", "Criterion_1", "old_copy.pdf")
     with open(own_output, "w", encoding="utf-8") as f:
         f.write("should never be re-discovered")
 
@@ -260,8 +260,8 @@ def main():
         problems.append(f"discover_files: ~$temp.docx should have been excluded, got {found}")
     if any("Thumbs.db" in f for f in found):
         problems.append(f"discover_files: Thumbs.db should have been excluded, got {found}")
-    if any("Praman_Sorted" in f for f in found):
-        problems.append(f"discover_files: Praman_Sorted contents should have been excluded, got {found}")
+    if any("Saandru_Sorted" in f for f in found):
+        problems.append(f"discover_files: Saandru_Sorted contents should have been excluded, got {found}")
     print(f"Found {len(found)} file(s), junk excluded correctly: {not problems}")
     for f in found:
         print(f"  - {f}")
