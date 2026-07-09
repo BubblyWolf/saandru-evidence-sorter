@@ -7,7 +7,7 @@ Builds samples/messy_torture/ -- a "torture" corpus that simulates a real
 college PC folder: messy names, nested folders, mixed formats, scans, junk.
 
 Uses ONLY offline resources:
-  - copies of real PDFs already in samples/jjcet_dvv/
+  - copies of real PDFs already in samples/real_dvv/
   - files generated with libs installed locally (PIL, python-docx, openpyxl,
     reportlab if present, python-pptx if present)
 
@@ -26,7 +26,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC_PDFS = ROOT / "samples" / "jjcet_dvv"
+SRC_PDFS = ROOT / "samples" / "real_dvv"
 OUT = ROOT / "samples" / "messy_torture"
 
 # ---- optional libs -----------------------------------------------------
@@ -73,7 +73,7 @@ def ensure_parent(p: Path):
 
 # --------------------------------------------------------------------- #
 def make_nested_real_pdfs():
-    """Copy real jjcet PDFs into nested paths with realistic bad names."""
+    """Copy real DVV PDFs into nested paths with realistic bad names."""
     mapping = [
         ("3.3.1.pdf", "Criterion 3 evidence/mous and collabs/scan0001.pdf", "3"),
         ("5.1.1.pdf", "NAAC WORK/final/New Document (2).pdf", "5"),

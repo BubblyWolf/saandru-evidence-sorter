@@ -7,7 +7,7 @@ the REAL autonomous NAAC pack (loaded the normal way via pack.load_metrics), and
 the counting logic: strong vs tentative evidence, coverage math, missing lists, and that
 review/unreadable docs are excluded from evidence everywhere.
 
-Run: python src/test_gap_report.py   (from the D:\\praman project root)
+Run: python src/test_gap_report.py   (from the project root)
 """
 import os
 import sys

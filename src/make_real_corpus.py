@@ -6,9 +6,11 @@ The SSR section number (e.g. 3.2.1) gives the ground-truth CRITERION (first digi
 We strip the leading number so the classifier can't cheat; it must judge by content.
 NOTE: SSR is old narrative format; metric ids won't match RAF pack, but CRITERION (1-7) does.
 """
-import pdfplumber, re, os, json, random
-SRC = r"D:\praman\samples\real\AKGEC_SSR.pdf"
-OUT = r"D:\praman\samples\real_chunks"
+import pdfplumber, re, os, json, random, sys
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Pass the SSR PDF path as the first argument; defaults to samples/real/ssr.pdf.
+SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(_ROOT, "samples", "real", "ssr.pdf")
+OUT = os.path.join(_ROOT, "samples", "real_chunks")
 os.makedirs(OUT, exist_ok=True)
 
 full = []

@@ -26,9 +26,7 @@ _JUNK_SUFFIXES = (".tmp", ".lnk", ".ini", ".db")
 
 # Saandru's own output folders -- if the tool is re-run on a folder it already
 # organized, its own copies must never be re-ingested as "new" source documents.
-# "Praman_Sorted" is the LEGACY name (the tool was renamed from Praman to Saandru);
-# kept here so a folder organized by an older build is still excluded on re-run.
-_OWN_OUTPUT_DIRNAMES = {"Saandru_Sorted", "Praman_Sorted"}
+_OWN_OUTPUT_DIRNAMES = {"Saandru_Sorted"}
 
 
 def _is_junk_name(name):

@@ -7,7 +7,8 @@ No real college/student data (privacy-safe). Mix of .txt and .docx to test both 
 import os, json, sys
 from docx import Document
 
-OUT = sys.argv[1] if len(sys.argv) > 1 else r"D:\praman\samples\mock"
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(_ROOT, "samples", "mock")
 os.makedirs(OUT, exist_ok=True)
 
 # (filename, true_criterion, true_ki, true_metric_hint, format, title, body)

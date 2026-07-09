@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 # Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
 # Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
-"""Build ground-truth manifest for a real Tamil Nadu engineering college's DVV
-per-metric evidence PDFs (folder name kept as "jjcet_dvv" -- see benchmarks/baseline.json).
-Filename = metric id = the answer key (real, current-format, TN engineering college)."""
+"""Build a ground-truth manifest for a real college's DVV per-metric evidence PDFs.
+Folder name is "real_dvv" -- see benchmarks/baseline.json.
+Filename = metric id = the answer key (real, current-format evidence)."""
 import os, json, sys
-sys.path.insert(0, r"D:\praman\src")
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(_ROOT, "src"))
 from ingest import read_document
 
-FOLDER = r"D:\praman\samples\jjcet_dvv"
+FOLDER = os.path.join(_ROOT, "samples", "real_dvv")
 manifest = []
 print(f"{'file':10} {'chars':>7} {'per-pg?':>8}  readable?")
 print("-"*50)

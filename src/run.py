@@ -26,8 +26,9 @@ from duplicates import find_duplicates, file_sha256
 from openpyxl import Workbook
 from report_pdf import write_gap_report_pdf, write_gap_report_html
 
-FOLDER = sys.argv[1] if len(sys.argv) > 1 else r"D:\praman\samples\mock"
-PACK = sys.argv[2] if len(sys.argv) > 2 else r"D:\praman\criteria\naac_affiliated_raf2021.yaml"
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FOLDER = sys.argv[1] if len(sys.argv) > 1 else os.path.join(_ROOT, "samples", "mock")
+PACK = sys.argv[2] if len(sys.argv) > 2 else os.path.join(_ROOT, "criteria", "naac_affiliated_raf2021.yaml")
 
 
 def main():

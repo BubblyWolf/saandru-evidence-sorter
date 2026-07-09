@@ -39,7 +39,7 @@ BENCHMARK_SETS = [
      "pack": "criteria/naac_affiliated_raf2021.yaml"},
     {"name": "real_chunks", "folder": "samples/real_chunks",
      "pack": "criteria/naac_affiliated_raf2021.yaml"},
-    {"name": "jjcet_dvv", "folder": "samples/jjcet_dvv",
+    {"name": "real_dvv", "folder": "samples/real_dvv",
      "pack": "criteria/naac_autonomous_raf.yaml"},
 ]
 

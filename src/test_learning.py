@@ -3,7 +3,7 @@
 """Offline self-test for Feature A (corrections.py + pipeline.classify()'s learned paths) and
 Feature B (duplicates.py). No Ollama needed -- embed()/generate_json() are monkeypatched.
 
-Run: python src/test_learning.py   (from the D:\\praman project root)
+Run: python src/test_learning.py   (from the project root)
 """
 import os
 import sys

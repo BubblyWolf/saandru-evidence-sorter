@@ -7,7 +7,7 @@ each, and prints a coverage table. Every row must be either real extracted
 text or one of our clear bracketed markers — zero exceptions allowed to
 escape read_document (that is the whole point of the hardening).
 
-Run: python src/test_ingest.py   (from the D:\\praman project root)
+Run: python src/test_ingest.py   (from the project root)
 """
 import os
 import sys
@@ -253,12 +253,6 @@ def main():
     own_output = os.path.join(discover_root, "Saandru_Sorted", "Criterion_1", "old_copy.pdf")
     with open(own_output, "w", encoding="utf-8") as f:
         f.write("should never be re-discovered")
-    # legacy output folder from a pre-rename (Praman) build must ALSO be excluded, so a
-    # college that upgrades mid-project never re-ingests its old organized copies.
-    os.makedirs(os.path.join(discover_root, "Praman_Sorted", "Criterion_1"), exist_ok=True)
-    legacy_output = os.path.join(discover_root, "Praman_Sorted", "Criterion_1", "old_copy.pdf")
-    with open(legacy_output, "w", encoding="utf-8") as f:
-        f.write("legacy output -- should never be re-discovered either")
 
     found = discover_files(discover_root)
     expected_rel = os.path.join("Criterion 3", "MoUs", "mou_2023.pdf")
@@ -270,8 +264,6 @@ def main():
         problems.append(f"discover_files: Thumbs.db should have been excluded, got {found}")
     if any("Saandru_Sorted" in f for f in found):
         problems.append(f"discover_files: Saandru_Sorted contents should have been excluded, got {found}")
-    if any("Praman_Sorted" in f for f in found):
-        problems.append(f"discover_files: legacy Praman_Sorted contents should have been excluded, got {found}")
     print(f"Found {len(found)} file(s), junk excluded correctly: {not problems}")
     for f in found:
         print(f"  - {f}")
