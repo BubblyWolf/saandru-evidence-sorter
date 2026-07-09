@@ -140,32 +140,18 @@ def check_tesseract():
 
 def check_ram():
     _print("\n== Memory (RAM) ==")
+    # Reuse the ONE cross-platform detector in src/ollama_client.py (Windows ctypes /
+    # Linux /proc/meminfo / optional psutil) rather than duplicating a Windows-only copy
+    # here -- that copy used to report "could not measure RAM" on every Mac/Linux machine.
+    # ollama_client imports only the standard library, so this is safe even on a setup
+    # with missing pip packages (which is exactly when this doctor script gets run).
     total_gb = None
     try:
-        import psutil  # not a hard dependency of this project -- use it only if present
-        total_gb = psutil.virtual_memory().total / (1024 ** 3)
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
+        from ollama_client import get_total_ram_gb
+        total_gb = get_total_ram_gb()
     except Exception:
-        try:
-            # Same Windows API approach as src/ollama_client.py.get_total_ram_gb(),
-            # kept as a small self-contained fallback so this script has no
-            # dependency on that module (it may fail to import on a broken setup).
-            import ctypes
-
-            class MEMORYSTATUSEX(ctypes.Structure):
-                _fields_ = [
-                    ("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
-                    ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
-                    ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
-                    ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
-                    ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
-                ]
-
-            stat = MEMORYSTATUSEX()
-            stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
-            ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
-            total_gb = stat.ullTotalPhys / (1024 ** 3)
-        except Exception:
-            total_gb = None
+        total_gb = None
 
     if total_gb is None:
         _print(f"{WARN} Could not measure RAM on this PC -- skipping this check.")

@@ -141,6 +141,10 @@ Official accreditation manuals are © their issuing bodies (NAAC/NBA) and are **
   affiliated with, endorsed by, or a substitute for NAAC/NBA's own processes.
 - **Scanned/photo documents** need Tesseract OCR installed (see Install, step 5); without it they are
   marked unreadable and sent to manual review rather than silently skipped.
+- **Old `.doc` files** (the pre-2007 binary Word format) are auto-converted only on **Windows with
+  Microsoft Word installed**. On macOS/Linux (or a Windows PC without Word) they are marked "please
+  re-save as `.docx`" and sent to review — modern `.docx` files work everywhere. Everything else in
+  Saandru is fully cross-platform.
 
 ## For researchers
 

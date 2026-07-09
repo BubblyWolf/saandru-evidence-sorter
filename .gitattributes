@@ -1,0 +1,16 @@
+# Normalize line endings across platforms: store text files as LF in the repository,
+# check them out with each contributor's native endings. Without this, a Windows author
+# and a Linux/Mac contributor constantly re-touch each other's line endings and see the
+# whole repo as "modified". Set once; harmless if you never leave your own platform.
+* text=auto
+
+# Binary files -- never line-ending-normalize these (would corrupt them).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.xlsx binary
+*.docx binary
+*.pptx binary
+*.ico binary
