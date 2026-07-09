@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Duplicate finder -- Feature B. Within ONE run, flag files that are copies of each other so
 office staff can keep one and delete the rest instead of accidentally filing the same evidence
 twice under two different metrics.
@@ -13,7 +15,8 @@ Two kinds of "same":
 Embeddings + plain code ONLY -- no chat-model calls here.
 """
 import hashlib
-import math
+
+from vecmath import cosine_similarity as _cos
 
 NEAR_THRESHOLD = 0.98
 
@@ -31,11 +34,6 @@ def file_sha256(path):
     return h.hexdigest()
 
 
-def _cos(a, b):
-    dot = sum(x * y for x, y in zip(a, b))
-    na = math.sqrt(sum(x * x for x in a))
-    nb = math.sqrt(sum(y * y for y in b))
-    return dot / (na * nb + 1e-9)
 
 
 def find_duplicates(items):

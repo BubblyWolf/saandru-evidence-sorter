@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Parse the NBA SAR Format (UG Engineering, Tier-II, GAPC V4.0, Jan 2025) into a criteria YAML pack.
 Source: reference/NBA_SAR_UG_TierII_2025_Format.pdf, extracted to text.
 """

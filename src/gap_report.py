@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Saandru -- the Gap Report: "what evidence is MISSING" for a criteria pack.
 
 100% deterministic. This module never calls the LLM -- it only counts and sorts

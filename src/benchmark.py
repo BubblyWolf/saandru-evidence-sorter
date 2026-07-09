@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Frozen accuracy scoreboard. Run this BEFORE and AFTER any tuning change to the
 classifier (pipeline.py) or a criteria pack -- it tells you honestly whether the
 change made things better or worse. Never tune blind.

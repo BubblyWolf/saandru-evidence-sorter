@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Parse the NAAC Affiliated/Constituent Colleges manual text into a criteria YAML pack.
 Source: official manual PDF (reference/NAAC_Affiliated_College_Manual.pdf), extracted to text.
 QnM/QlM types are HEURISTIC (table layout lost in extraction) -> verify_type flag set for hand-check.

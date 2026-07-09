@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Slice REAL evidence chunks from a real college SSR PDF -> labeled test docs.
 The SSR section number (e.g. 3.2.1) gives the ground-truth CRITERION (first digit).
 We strip the leading number so the classifier can't cheat; it must judge by content.

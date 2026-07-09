@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Offline self-test for gap_report.py -- no Ollama needed.
 
 Builds a small synthetic set of "decisions" (the shape run.py/app.py produce) against

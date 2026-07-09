@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Read a document (txt / docx / pdf / xlsx / csv / pptx / images) into plain text.
 
 Local only. Golden rule: NEVER crash, NEVER silently skip. Every unreadable or
@@ -9,6 +11,20 @@ import io
 import os
 import shutil
 import zipfile
+
+# Decompression-bomb guard: this file opens arbitrary scanned images/PDFs from real
+# college folders, some of which may be corrupt, mislabeled, or crafted maliciously.
+# PIL.Image.MAX_IMAGE_PIXELS is set explicitly (rather than relying on whatever the
+# installed Pillow version's implicit default happens to be) so opening a decoy image
+# with an enormous declared resolution raises PIL's own DecompressionBombError instead
+# of the process trying to allocate gigabytes of pixel data. Set once, at import time,
+# on the PIL.Image module itself -- this also covers pdfplumber's internal use of PIL
+# when rendering a scanned PDF page to an image (see _read_pdf's OCR fallback below).
+try:
+    from PIL import Image as _PILImage
+    _PILImage.MAX_IMAGE_PIXELS = 178_956_970  # ~179 megapixels, Pillow's own historical default
+except ImportError:
+    pass
 
 MAX_XLSX_CHARS = 4000
 OCR_TEXT_PER_PAGE_THRESHOLD = 40  # avg chars/page below this => treat PDF as scanned

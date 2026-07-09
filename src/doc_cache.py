@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Per-document result cache so re-running the same folder is near-instant.
 
 Cache key = sha256(file BYTES + pack hash + model name). Hashing the raw bytes (not the

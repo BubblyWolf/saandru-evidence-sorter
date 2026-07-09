@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Offline self-test for Feature A (corrections.py + pipeline.classify()'s learned paths) and
 Feature B (duplicates.py). No Ollama needed -- embed()/generate_json() are monkeypatched.
 
@@ -372,7 +374,6 @@ def test_chat_model_tiering():
     print("\n== ollama_client._choose_chat_model(): hardware auto-tiering ==")
     HIGH, LOW = ollama_client._HIGH_RAM_MODEL, ollama_client._LOW_RAM_MODEL
 
-    real_env = os.environ.pop("PRAMAN_MODEL", None)
     real_env_new = os.environ.pop("SAANDRU_MODEL", None)
     try:
         # high-RAM machine, both models installed -> default 3b, unchanged.
@@ -407,21 +408,13 @@ def test_chat_model_tiering():
         check("nothing installed -> keeps RAM-preferred name (no crash)", model == HIGH, model)
 
         # env override wins over everything, even a low-RAM machine with nothing installed.
-        os.environ["PRAMAN_MODEL"] = "custom-model:latest"
+        os.environ["SAANDRU_MODEL"] = "custom-model:latest"
         model, reason = ollama_client._choose_chat_model(ram_gb=4, installed=[])
         check("env override wins over RAM tier", model == "custom-model:latest", model)
         check("env override reason says so", reason == "env override", reason)
-
-        # SAANDRU_MODEL is the preferred alias -- it beats the older PRAMAN_MODEL name.
-        os.environ["SAANDRU_MODEL"] = "newer-model:latest"
-        model, reason = ollama_client._choose_chat_model(ram_gb=4, installed=[])
-        check("SAANDRU_MODEL alias beats PRAMAN_MODEL", model == "newer-model:latest", model)
         os.environ.pop("SAANDRU_MODEL", None)
     finally:
-        os.environ.pop("PRAMAN_MODEL", None)
         os.environ.pop("SAANDRU_MODEL", None)
-        if real_env is not None:
-            os.environ["PRAMAN_MODEL"] = real_env
         if real_env_new is not None:
             os.environ["SAANDRU_MODEL"] = real_env_new
 

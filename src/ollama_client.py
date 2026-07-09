@@ -1,8 +1,11 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Tiny local Ollama client — talks to the offline server on localhost:11434.
 No API keys, no cloud. Just embeddings (matcher) + generate (brain)."""
 import ctypes
 import json
 import os
+import platform
 import urllib.request
 
 BASE = "http://localhost:11434"
@@ -21,30 +24,64 @@ _LOW_RAM_MODEL = "qwen2.5:1.5b"
 _RAM_TIER_CUTOFF_GB = 8
 
 
-def get_total_ram_gb():
-    """Total physical RAM in GB via the Windows API (ctypes, no psutil dependency).
-    Any failure (non-Windows, API error, ...) falls back to 16GB -- i.e. "assume a normal
-    machine and keep today's behaviour" rather than silently downgrading everyone's model."""
-    try:
-        class MEMORYSTATUSEX(ctypes.Structure):
-            _fields_ = [
-                ("dwLength", ctypes.c_ulong),
-                ("dwMemoryLoad", ctypes.c_ulong),
-                ("ullTotalPhys", ctypes.c_ulonglong),
-                ("ullAvailPhys", ctypes.c_ulonglong),
-                ("ullTotalPageFile", ctypes.c_ulonglong),
-                ("ullAvailPageFile", ctypes.c_ulonglong),
-                ("ullTotalVirtual", ctypes.c_ulonglong),
-                ("ullAvailVirtual", ctypes.c_ulonglong),
-                ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
-            ]
+def _ram_gb_windows():
+    """Total physical RAM via the Windows API (ctypes, no extra dependency)."""
+    class MEMORYSTATUSEX(ctypes.Structure):
+        _fields_ = [
+            ("dwLength", ctypes.c_ulong),
+            ("dwMemoryLoad", ctypes.c_ulong),
+            ("ullTotalPhys", ctypes.c_ulonglong),
+            ("ullAvailPhys", ctypes.c_ulonglong),
+            ("ullTotalPageFile", ctypes.c_ulonglong),
+            ("ullAvailPageFile", ctypes.c_ulonglong),
+            ("ullTotalVirtual", ctypes.c_ulonglong),
+            ("ullAvailVirtual", ctypes.c_ulonglong),
+            ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+        ]
 
-        stat = MEMORYSTATUSEX()
-        stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
-        ok = ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))  # noqa: SLF001
-        if not ok:
-            return 16.0
-        return stat.ullTotalPhys / (1024.0 ** 3)
+    stat = MEMORYSTATUSEX()
+    stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+    ok = ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))  # noqa: SLF001
+    if not ok:
+        raise OSError("GlobalMemoryStatusEx failed")
+    return stat.ullTotalPhys / (1024.0 ** 3)
+
+
+def _ram_gb_proc_meminfo():
+    """Total physical RAM via /proc/meminfo -- present on every Linux system, no
+    dependency needed (this is how psutil itself gets the number on Linux)."""
+    with open("/proc/meminfo", encoding="ascii") as f:
+        for line in f:
+            if line.startswith("MemTotal:"):
+                kb = int(line.split()[1])
+                return kb / (1024.0 ** 2)
+    raise OSError("MemTotal not found in /proc/meminfo")
+
+
+def _ram_gb_psutil():
+    """Total physical RAM via psutil, if it happens to be installed. Not a hard
+    dependency of this project (see requirements.txt) -- purely an optional extra
+    for platforms (chiefly macOS) with no simpler stdlib-only path."""
+    import psutil  # noqa: PLC0415 -- intentionally lazy/optional
+    return psutil.virtual_memory().total / (1024.0 ** 3)
+
+
+def get_total_ram_gb():
+    """Total physical RAM in GB, detected without any hard new dependency.
+    Windows -> ctypes API. Linux -> /proc/meminfo (stdlib only). Anything else
+    (macOS, etc) -> psutil IF installed. If none of that works, fall back to 16GB
+    -- i.e. "assume a normal machine and keep today's behaviour" rather than
+    silently downgrading every non-Windows reviewer/user to the weaker model tier."""
+    system = platform.system()
+    try:
+        if system == "Windows":
+            return _ram_gb_windows()
+        if system == "Linux":
+            return _ram_gb_proc_meminfo()
+    except Exception:
+        pass
+    try:
+        return _ram_gb_psutil()
     except Exception:
         return 16.0
 
@@ -65,15 +102,14 @@ def _installed_model_names():
 
 def _choose_chat_model(ram_gb=None, installed=None):
     """Pick CHAT_MODEL + a one-line human-readable reason. Priority:
-    1. SAANDRU_MODEL env var (preferred), or the older PRAMAN_MODEL alias -- explicit
-       operator override, wins over everything.
+    1. SAANDRU_MODEL env var -- explicit operator override, wins over everything.
     2. RAM tier (>=8GB -> 3b, <8GB -> prefer 1.5b) reconciled against what Ollama actually
        has installed -- a preferred model that isn't pulled yet is worse than the other tier
        IF that other tier happens to be installed instead.
     3. If neither/both/unclear, fall back to the RAM-preferred name as-is (Ollama's own error
        on the first real call is clearer than the tool silently guessing further).
     """
-    env_override = os.environ.get("SAANDRU_MODEL") or os.environ.get("PRAMAN_MODEL")
+    env_override = os.environ.get("SAANDRU_MODEL")
     if env_override:
         return env_override, "env override"
 
@@ -132,7 +168,11 @@ def generate_json(prompt, model=CHAT_MODEL, temperature=0.0):
         "keep_alive": "10m",  # see embed() -- avoid reload latency between documents
         # num_predict caps the reply length: our JSON answers are tiny (a letter, a float,
         # a short quote), so an uncapped model can ramble and pay tail latency for nothing.
-        "options": {"temperature": temperature, "num_predict": 160},
+        # 256 rather than 160 -- the reply packs an evidence sentence + a 3-6 word title +
+        # a confidence float into one JSON object, and 160 was tight enough to risk a
+        # verbose model getting cut off mid-JSON (which _parse_error already degrades
+        # safely to a review-bucket outcome, but it's still lost signal worth avoiding).
+        "options": {"temperature": temperature, "num_predict": 256},
     })
     raw = out.get("response", "").strip()
     try:

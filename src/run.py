@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Saandru runner: point at a folder of documents -> sort each to a NAAC/NBA metric -> Excel index.
 Usage: python src/run.py <folder> [pack_yaml]
 If the folder has _ground_truth.json (mock set), prints accuracy too.

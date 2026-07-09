@@ -1,5 +1,7 @@
 # Saandru — local, private accreditation evidence sorter
 
+[![Tests](https://github.com/BubblyWolf/saandru-evidence-sorter/actions/workflows/tests.yml/badge.svg)](https://github.com/BubblyWolf/saandru-evidence-sorter/actions/workflows/tests.yml)
+
 **Saandru** (சான்று, Tamil for "proof/evidence") is a free, open-source tool that helps small colleges
 organise their accreditation evidence. Point it at a messy folder of documents; it reads each file,
 matches it to the right accreditation criterion/metric, builds an evidence index (Excel) and a gap
@@ -55,17 +57,18 @@ naming/headings are):
 
 | Test set | Docs | Criterion-level accuracy | Exact-metric accuracy | Committed & correct (on criterion) |
 |---|---|---|---|---|
-| Mock evidence set | 15 | 100% | 71.4% | 100% |
-| Real SSR chunks (old narrative format) | 13 | 61.5% | n/a (different pack format) | 66.7% |
+| Mock evidence set | 15 | 92.9% | 71.4% | 92.9% |
+| Real SSR chunks (old narrative format) | 13 | 53.8% | n/a (different pack format) | 71.4% |
 | Real DVV evidence set (autonomous pack) | 15 | 86.7% | 33.3% | 100% |
 
 **Honest read of these numbers:** criterion-level accuracy (did it find the right general area, e.g.
-"Criterion 3: Research") typically lands around **85–90%**, with high precision on whatever it actually
+"Criterion 3: Research") typically lands around **80–90%**, with high precision on whatever it actually
 commits to automatically. Exact-metric accuracy (the precise sub-point, e.g. "3.4.2") is deliberately much
 lower — around **33%** on real documents — **by design**: when the tool is only confident about the
 general area, it marks that document "criterion-only / tentative" instead of guessing the exact metric,
 and hands it to a human to confirm. This is why the oversight levels exist. Numbers vary run-to-run
-(the model's self-consistency voting has some randomness) and will vary further on your own documents.
+(the model's self-consistency voting has some randomness, documented at roughly ±7 points between
+otherwise-identical runs — see `benchmarks/baseline.json`) and will vary further on your own documents.
 
 ## Hardware needs
 

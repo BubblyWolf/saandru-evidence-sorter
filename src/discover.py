@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Recursive file discovery for a source folder.
 
 Real college folders are messy: nested subfolders (Criterion 3/MoUs/...), stray

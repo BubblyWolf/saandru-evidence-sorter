@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """
 Saandru -- Accreditation Evidence Sorter
 Single-file Streamlit UI for non-technical college office staff.

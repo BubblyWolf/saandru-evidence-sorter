@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Build ground-truth manifest for a real Tamil Nadu engineering college's DVV
 per-metric evidence PDFs (folder name kept as "jjcet_dvv" -- see benchmarks/baseline.json).
 Filename = metric id = the answer key (real, current-format, TN engineering college)."""

@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Coverage test for ingest.read_document().
 
 Generates small test files under samples/formats/, runs read_document on

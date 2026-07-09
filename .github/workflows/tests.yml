@@ -1,0 +1,40 @@
+name: Tests
+
+# Runs the offline self-tests -- the ones that need no Ollama, no local model, and no
+# real-college test data (that data lives in samples/, which is gitignored and never
+# leaves a contributor's own machine). These four scripts cover ingest.py's never-crash
+# guarantee, gap_report.py's counting logic, organize.py's folder/collision/manifest
+# behaviour, and Feature A/B's corrections+duplicates logic (Ollama calls monkeypatched).
+# The classifier itself (pipeline.py, via the frozen benchmark in benchmarks/baseline.json)
+# needs a real local Ollama + model and is verified manually -- see README's "How accurate
+# is it?" section for those numbers.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: ingest.py -- never-crash guarantee + file discovery
+        run: python src/test_ingest.py
+
+      - name: gap_report.py -- coverage/gap counting logic
+        run: python src/test_gap_report.py
+
+      - name: corrections.py + duplicates.py -- learning memory + duplicate finder
+        run: python src/test_learning.py
+
+      - name: organize.py -- folder layout, collisions, tamper-evident manifest
+        run: python src/organize.py

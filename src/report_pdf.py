@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Saandru -- gap report as PDF (and an HTML fallback for PCs without reportlab).
 
 Both functions take the SAME `report_dict` shape that gap_report.build_gap_report()

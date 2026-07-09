@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Generate a small LABELED test corpus of realistic (fake) accreditation evidence documents.
 Each doc maps to a known NAAC metric id -> lets us MEASURE the tool's accuracy.
 No real college/student data (privacy-safe). Mix of .txt and .docx to test both readers.

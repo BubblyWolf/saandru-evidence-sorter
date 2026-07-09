@@ -1,3 +1,5 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """Corrections memory -- Feature A.
 
 When a human corrects or confirms a metric in the review UI (app.py's Accept / Save choice
@@ -16,18 +18,12 @@ yet", not an error -- a human clicking Accept must never be able to crash the re
 """
 import datetime as _dt
 import json
-import math
 import os
+
+from vecmath import cosine_similarity as _cos
 
 STORE_PATH = os.path.join(os.path.dirname(__file__), "..", "output", "_corrections.json")
 MAX_PER_PACK = 500  # FIFO cap -- oldest correction for that pack drops first once exceeded
-
-
-def _cos(a, b):
-    dot = sum(x * y for x, y in zip(a, b))
-    na = math.sqrt(sum(x * x for x in a))
-    nb = math.sqrt(sum(y * y for y in b))
-    return dot / (na * nb + 1e-9)
 
 
 def _load():

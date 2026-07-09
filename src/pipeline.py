@@ -1,10 +1,13 @@
+# Saandru -- Copyright (C) 2026 Chitranjan Jegadeesan.
+# Licensed under the GNU Affero General Public License v3.0 or later; see LICENSE.
 """The classifier: embedding shortlist (top-5) -> small-LLM adjudication with self-consistency.
 Code does the structure; the 3B model only picks among up to 5 and quotes evidence. That's why a
 small model is enough.
 """
 import hashlib
-import json, math, os, re
+import json, os, re
 from ollama_client import embed, generate_json
+from vecmath import cosine_similarity as _cos
 
 # corrections memory (Feature A) is optional: a fresh checkout with no output/_corrections.json
 # yet, or a corrupted one, must classify exactly like before -- so the import itself is
@@ -23,7 +26,9 @@ except Exception:
 # v6: _read_docx now also reads TABLE cells + headers/footers -- table-heavy college docs
 # (MoU/committee/attendance lists) used to extract as near-empty, so their old cached
 # results must not be served.
-PIPELINE_VERSION = "6"
+# v7: generate_json's num_predict raised 160->256 (ollama_client.py) -- a previously
+# truncated/parse-failed response can now complete, changing some review->auto outcomes.
+PIPELINE_VERSION = "7"
 
 # corrections-memory thresholds (Feature A): a remembered document doesn't have to be
 # byte-identical to fire -- nomic-embed-text similarity this high means "basically the same
@@ -50,12 +55,6 @@ KEYWORD_BOOST_TERMS = [
     "energy audit", "rain water", "waste management", "e-resources", "phd",
 ]
 KEYWORD_BOOST = 0.05
-
-
-def _cos(a, b):
-    dot = sum(x * y for x, y in zip(a, b))
-    na = math.sqrt(sum(x * x for x in a)); nb = math.sqrt(sum(y * y for y in b))
-    return dot / (na * nb + 1e-9)
 
 
 def _pack_hash(metrics):
