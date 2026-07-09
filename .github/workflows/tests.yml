@@ -23,18 +23,29 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          # Cache the pip downloads keyed on requirements.txt: the first run installs
+          # the full set (~1-2 min, streamlit is the heavy one), later runs restore in
+          # seconds until requirements.txt changes.
+          cache: pip
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # Every suite carries `if: always()` so a failure in one does NOT skip the rest --
+      # all four run on every push and each reports its own red/green in the Actions UI,
+      # so a bad change shows every place it broke, not just the first.
       - name: ingest.py -- never-crash guarantee + file discovery
+        if: always()
         run: python src/test_ingest.py
 
       - name: gap_report.py -- coverage/gap counting logic
+        if: always()
         run: python src/test_gap_report.py
 
       - name: corrections.py + duplicates.py -- learning memory + duplicate finder
+        if: always()
         run: python src/test_learning.py
 
       - name: organize.py -- folder layout, collisions, tamper-evident manifest
+        if: always()
         run: python src/organize.py
