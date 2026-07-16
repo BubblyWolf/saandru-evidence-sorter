@@ -9,6 +9,7 @@ type: software
 authors:
   - family-names: "Jegadeesan"
     given-names: "Chitranjan"
+    orcid: "https://orcid.org/0009-0009-4029-2128"
 license: "AGPL-3.0-or-later"
 doi: "10.5281/zenodo.21390822"
 repository-code: "https://github.com/BubblyWolf/saandru-evidence-sorter"
