@@ -152,12 +152,11 @@ Official accreditation manuals are © their issuing bodies (NAAC/NBA) and are **
 
 ## For researchers
 
-The **oversight dial** (Safest / Balanced / Fastest, called L1/L2/L3 internally) is a deliberate design
-feature: it lets you study how much a human should trust an AI assistant to act on its own in a real
-office workflow, and how that trust should be calibrated by task confidence rather than fixed in advance.
-The tool logs every decision (what was suggested, at what confidence, what a human did about it) so that
-behaviour can be analysed afterward. No specific study, institution, or individual is referenced in this
-codebase — build on it freely under the license below.
+Saandru writes an **audit log** of every decision it makes — what it suggested, at what confidence, and
+what the human did about it (accept / change / skip) — to a local file, so a run can be reviewed
+afterward. This tool is part of ongoing academic research; if you use it in your own work, please cite it
+(see [CITATION.cff](CITATION.cff)). No specific study, institution, or individual is referenced in this
+codebase.
 
 ## License
 

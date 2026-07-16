@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use Saandru in your work, please cite it as below."
+title: "Saandru: local, private accreditation evidence sorter"
+abstract: >-
+  A free, offline tool that sorts Indian college accreditation evidence
+  (NAAC / NBA) using a local language model, keeping every document on the
+  user's own computer.
+type: software
+authors:
+  - family-names: "Jegadeesan"
+    given-names: "Chitranjan"
+license: "AGPL-3.0-or-later"
+repository-code: "https://github.com/BubblyWolf/saandru-evidence-sorter"
+url: "https://github.com/BubblyWolf/saandru-evidence-sorter"
+version: "1.0.0"
+date-released: "2026-07-16"
+keywords:
+  - accreditation
+  - NAAC
+  - NBA
+  - evidence-management
+  - offline-ai
+  - local-first
