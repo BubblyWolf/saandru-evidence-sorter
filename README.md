@@ -5,6 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
 ![Runs offline](https://img.shields.io/badge/Runs-100%25%20offline-brightgreen.svg)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21390822.svg)](https://doi.org/10.5281/zenodo.21390822)
 
 **Saandru** (சான்று, Tamil for "proof/evidence") is a free, open-source tool that helps small colleges
 organise their accreditation evidence. Point it at a messy folder of documents; it reads each file,

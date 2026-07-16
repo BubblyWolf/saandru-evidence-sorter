@@ -10,6 +10,7 @@ authors:
   - family-names: "Jegadeesan"
     given-names: "Chitranjan"
 license: "AGPL-3.0-or-later"
+doi: "10.5281/zenodo.21390822"
 repository-code: "https://github.com/BubblyWolf/saandru-evidence-sorter"
 url: "https://github.com/BubblyWolf/saandru-evidence-sorter"
 version: "1.0.0"
